@@ -5,21 +5,29 @@ import { desc, eq, count } from "drizzle-orm";
 import FreightCard from "@/components/FreightCard";
 import { UFS } from "@/lib/constants";
 import { IcUser, IcSearch, IcMsg, IcCheck, IcMap, IcChart, IcCalc, IcRefresh, IcStar, IcBell, IcPlus, IcTruck, IcTarget, IcShield } from "@/components/Icons";
+import { safeQuery } from "@/lib/db-query";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [latest, freightCount, userCount] = await Promise.all([
-    db
+  const { data: latest, error: dbError } = await safeQuery(async () => {
+    const rows = await db
       .select({ freight: freights, ownerName: users.name, ownerCompany: users.company })
       .from(freights)
       .innerJoin(users, eq(freights.userId, users.id))
       .where(eq(freights.status, "ativo"))
       .orderBy(desc(freights.createdAt))
-      .limit(6),
-    db.select({ c: count() }).from(freights).where(eq(freights.status, "ativo")),
-    db.select({ c: count() }).from(users),
-  ]);
+      .limit(6);
+    return rows;
+  });
+
+  const { data: freightCount } = await safeQuery(async () => {
+    return db.select({ c: count() }).from(freights).where(eq(freights.status, "ativo"));
+  });
+
+  const { data: userCount } = await safeQuery(async () => {
+    return db.select({ c: count() }).from(users);
+  });
 
   return (
     <div>
@@ -40,52 +48,31 @@ export default async function HomePage() {
           <p className="mt-4 text-lg text-slate-300 max-w-xl">
             Milhares de fretes publicados por embarcadores e transportadoras. Negocie direto pelo WhatsApp ou pelo chat interno, sem intermediários.
           </p>
-
-          {/* Quick search */}
           <form action="/fretes" method="GET" className="mt-8 bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-2xl max-w-3xl">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">Origem (UF)</label>
                 <select name="originState" className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-slate-900 dark:text-white text-sm">
                   <option value="">Todo o Brasil</option>
-                  {UFS.map((uf) => (
-                    <option key={uf} value={uf}>{uf}</option>
-                  ))}
+                  {UFS.map((uf) => (<option key={uf} value={uf}>{uf}</option>))}
                 </select>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">Destino (UF)</label>
                 <select name="destState" className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-slate-900 dark:text-white text-sm">
                   <option value="">Todo o Brasil</option>
-                  {UFS.map((uf) => (
-                    <option key={uf} value={uf}>{uf}</option>
-                  ))}
+                  {UFS.map((uf) => (<option key={uf} value={uf}>{uf}</option>))}
                 </select>
               </div>
               <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-2.5 rounded-lg transition-colors"
-                >
-                  🔍 Buscar fretes
-                </button>
+                <button type="submit" className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-2.5 rounded-lg transition-colors">🔍 Buscar fretes</button>
               </div>
             </div>
           </form>
-
           <div className="mt-10 flex flex-wrap gap-8">
-            <div>
-              <p className="text-3xl font-extrabold text-orange-400">{freightCount[0].c.toLocaleString("pt-BR")}</p>
-              <p className="text-sm text-slate-300">fretes ativos agora</p>
-            </div>
-            <div>
-              <p className="text-3xl font-extrabold text-orange-400">{userCount[0].c.toLocaleString("pt-BR")}</p>
-              <p className="text-sm text-slate-300">usuários cadastrados</p>
-            </div>
-            <div>
-              <p className="text-3xl font-extrabold text-orange-400">27</p>
-              <p className="text-sm text-slate-300">estados atendidos</p>
-            </div>
+            <div><p className="text-3xl font-extrabold text-orange-400">{freightCount?.[0]?.c?.toLocaleString("pt-BR") || "0"}</p><p className="text-sm text-slate-300">fretes ativos agora</p></div>
+            <div><p className="text-3xl font-extrabold text-orange-400">{userCount?.[0]?.c?.toLocaleString("pt-BR") || "0"}</p><p className="text-sm text-slate-300">usuários cadastrados</p></div>
+            <div><p className="text-3xl font-extrabold text-orange-400">27</p><p className="text-sm text-slate-300">estados atendidos</p></div>
           </div>
         </div>
       </section>
@@ -94,15 +81,18 @@ export default async function HomePage() {
       <section className="max-w-6xl mx-auto px-4 py-14">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Últimos fretes publicados</h2>
-          <Link href="/fretes" className="text-orange-600 font-semibold text-sm hover:underline">
-            Ver todos →
-          </Link>
+          <Link href="/fretes" className="text-orange-600 font-semibold text-sm hover:underline">Ver todos →</Link>
         </div>
-        {latest.length === 0 ? (
+        {dbError ? (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-6 text-center">
+            <p className="text-sm text-amber-800 dark:text-amber-300">Não foi possível carregar os fretes agora. O banco de dados pode estar inicializando.</p>
+            <Link href="/fretes" className="mt-3 inline-block text-orange-600 font-semibold text-sm hover:underline">Ir para a busca de fretes →</Link>
+          </div>
+        ) : latest?.length === 0 ? (
           <p className="text-slate-500 dark:text-slate-400">Nenhum frete publicado ainda. Seja o primeiro!</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {latest.map((row) => (
+            {latest?.map((row) => (
               <FreightCard key={row.freight.id} freight={row.freight} ownerName={row.ownerName} ownerCompany={row.ownerCompany} />
             ))}
           </div>
@@ -135,14 +125,14 @@ export default async function HomePage() {
         <h2 className="text-2xl font-extrabold text-center text-slate-900 dark:text-white">Ferramentas exclusivas do FreteTruck</h2>
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { ic: <IcTarget className="w-6 h-6" />, title: "Propostas online", desc: "Envie seu lance direto na plataforma e acompanhe se foi aceito.", href: "/fretes" },
-            { ic: <IcMsg className="w-6 h-6" />, title: "Chat interno", desc: "Converse direto com embarcadores e motoristas sem sair da plataforma.", href: "/chat" },
-            { ic: <IcMap className="w-6 h-6" />, title: "Mapa de fretes", desc: "Visualize a distribuição de cargas por estado em mapa interativo.", href: "/mapa" },
-            { ic: <IcChart className="w-6 h-6" />, title: "Tabela de preços", desc: "Veja o preço médio por rota e R$/km para negociar melhor.", href: "/precos" },
-            { ic: <IcCalc className="w-6 h-6" />, title: "Calculadora de frete", desc: "Calcule diesel, pedágio, manutenção e lucro real por viagem.", href: "/calculadora" },
-            { ic: <IcRefresh className="w-6 h-6" />, title: "Frete de retorno", desc: "Em cada frete, veja cargas saindo do destino. Nunca mais volte vazio.", href: "/fretes" },
-            { ic: <IcStar className="w-6 h-6" />, title: "Reputação e badges", desc: "Avaliações reais e badges de confiança para saber com quem está fechando.", href: "/fretes" },
-            { ic: <IcBell className="w-6 h-6" />, title: "Notificações em tempo real", desc: "Receba alertas de proposta aceita, novas mensagens e mais.", href: "/painel" },
+            { ic: <IcTarget className="w-6 h-6" />, title: "Propostas online", desc: "Envie seu lance direto na plataforma.", href: "/fretes" },
+            { ic: <IcMsg className="w-6 h-6" />, title: "Chat interno", desc: "Converse sem sair do app.", href: "/chat" },
+            { ic: <IcMap className="w-6 h-6" />, title: "Mapa de fretes", desc: "Visualize cargas por estado.", href: "/mapa" },
+            { ic: <IcChart className="w-6 h-6" />, title: "Tabela de preços", desc: "Compare R$/km por rota.", href: "/precos" },
+            { ic: <IcCalc className="w-6 h-6" />, title: "Calculadora de frete", desc: "Lucro real da viagem.", href: "/calculadora" },
+            { ic: <IcRefresh className="w-6 h-6" />, title: "Frete de retorno", desc: "Nunca volte vazio.", href: "/fretes" },
+            { ic: <IcStar className="w-6 h-6" />, title: "Reputação e badges", desc: "Confiança nas negociações.", href: "/fretes" },
+            { ic: <IcBell className="w-6 h-6" />, title: "Notificações", desc: "Alertas em tempo real.", href: "/painel" },
           ].map((f) => (
             <Link key={f.title} href={f.href} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 hover:border-orange-400 hover:shadow-lg transition-all">
               <div className="w-11 h-11 rounded-xl bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center text-orange-500">{f.ic}</div>
@@ -157,22 +147,10 @@ export default async function HomePage() {
       <section className="max-w-6xl mx-auto px-4 pb-14">
         <div className="bg-slate-900 dark:bg-black rounded-3xl p-10 md:p-14 text-center text-white">
           <h2 className="text-3xl font-extrabold">Tem carga para transportar?</h2>
-          <p className="mt-3 text-slate-300 max-w-lg mx-auto">
-            Publique seu frete gratuitamente e receba propostas de milhares de caminhoneiros em todo o Brasil.
-          </p>
+          <p className="mt-3 text-slate-300 max-w-lg mx-auto">Publique seu frete gratuitamente e receba propostas de milhares de caminhoneiros em todo o Brasil.</p>
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
-            <Link
-              href="/publicar"
-              className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-3 rounded-xl transition-colors"
-            >
-              Publicar frete grátis
-            </Link>
-            <Link
-              href="/calculadora"
-              className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold px-8 py-3 rounded-xl border border-white/20 transition-colors"
-            >
-              Calcular frete
-            </Link>
+            <Link href="/publicar" className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-3 rounded-xl transition-colors">Publicar frete grátis</Link>
+            <Link href="/calculadora" className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold px-8 py-3 rounded-xl border border-white/20 transition-colors">Calcular frete</Link>
           </div>
         </div>
       </section>
