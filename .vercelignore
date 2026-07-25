@@ -1,0 +1,11 @@
+mobile/
+scripts/
+docs/
+*.md
+.env.example
+.env.production
+Dockerfile
+docker-compose.yml
+nginx.conf
+tmp/
+logs/
