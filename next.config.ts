@@ -1,26 +1,27 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Otimizações para Vercel
   reactStrictMode: true,
 
-  // Imagens otimizadas
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },
+      { protocol: "http", hostname: "**" },
     ],
   },
 
-  // Headers de segurança
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: "/uploads/(.*)",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Cache-Control", value: "public, max-age=86400, immutable" },
+        ],
+      },
+      {
+        source: "/images/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, immutable" },
         ],
       },
       {
@@ -30,18 +31,6 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
-  },
-
-  // Webhook do Mercado Pago precisa de body raw
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "2mb",
-    },
-  },
-
-  // TypeScript
-  typescript: {
-    ignoreBuildErrors: false,
   },
 };
 

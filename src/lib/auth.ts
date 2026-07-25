@@ -47,12 +47,22 @@ export function parseSessionToken(token: string | undefined): number | null {
   return Number.isNaN(id) ? null : id;
 }
 
+// Detecta se estamos em HTTPS (produção/Vercel) ou HTTP (dev local)
+function isHttps(): boolean {
+  // No Vercel/produção sempre HTTPS. O header x-forwarded-proto é setado pelo proxy.
+  // Em dev local ou ambientes sem HTTPS, retornamos false para o cookie funcionar.
+  if (process.env.NODE_ENV === "production") return true;
+  if (process.env.VERCEL) return true;
+  return false;
+}
+
 export async function setSessionCookie(userId: number) {
   const store = await cookies();
+  const secure = isHttps();
   store.set(COOKIE_NAME, createSessionToken(userId), {
     httpOnly: true,
-    secure: true,
-    sameSite: "none" as const,
+    secure,
+    sameSite: secure ? "none" : "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
@@ -60,19 +70,24 @@ export async function setSessionCookie(userId: number) {
 
 export async function clearSessionCookie() {
   const store = await cookies();
+  const secure = isHttps();
   store.set(COOKIE_NAME, "", {
     httpOnly: true,
-    secure: true,
-    sameSite: "none" as const,
+    secure,
+    sameSite: secure ? "none" : "lax",
     path: "/",
     maxAge: 0,
   });
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const store = await cookies();
-  const userId = parseSessionToken(store.get(COOKIE_NAME)?.value);
-  if (!userId) return null;
-  const rows = await db.select().from(users).where(and(eq(users.id, userId), isNull(users.deletedAt))).limit(1);
-  return rows[0] ?? null;
+  try {
+    const store = await cookies();
+    const userId = parseSessionToken(store.get(COOKIE_NAME)?.value);
+    if (!userId) return null;
+    const rows = await db.select().from(users).where(and(eq(users.id, userId), isNull(users.deletedAt))).limit(1);
+    return rows[0] ?? null;
+  } catch {
+    return null;
+  }
 }
