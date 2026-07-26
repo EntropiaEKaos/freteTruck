@@ -1,0 +1,21 @@
+services:
+  - name: fretetruck
+    docker:
+      image: ""
+      command: ""
+      dockerfilePath: ./Dockerfile
+    ports:
+      - port: 3000
+        protocol: http
+    healthcheck:
+      http:
+        path: /api/health
+        port: 3000
+    routes:
+      - match:
+          - pathPrefix: /
+        target:
+          port: 3000
+    env:
+      - name: NODE_ENV
+        value: production

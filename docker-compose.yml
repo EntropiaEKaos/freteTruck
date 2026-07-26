@@ -7,8 +7,9 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/app_db
-      - AUTH_SECRET=${AUTH_SECRET:-fretetruck-change-me-in-production}
+      - AUTH_SECRET=${AUTH_SECRET:-fretetruck-secret-dev-2024}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - NODE_ENV=production
     depends_on:
       db:
         condition: service_healthy

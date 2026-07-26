@@ -1,0 +1,26 @@
+{
+  "name": "FreteTruck",
+  "description": "Marketplace de fretes que conecta caminhoneiros e embarcadores",
+  "website": "https://fretetruck.app",
+  "repository": "https://github.com/SEU_USER/fretetruck",
+  "keywords": ["nextjs", "frete", "logistica", "brasil", "postgresql"],
+  "stack": "container",
+  "env": {
+    "DATABASE_URL": {
+      "description": "URL do PostgreSQL (ex: postgresql://user:pass@host:5432/db)",
+      "required": true
+    },
+    "AUTH_SECRET": {
+      "description": "Chave para sessões (gerar com: openssl rand -hex 32)",
+      "required": true
+    },
+    "NEXT_PUBLIC_APP_URL": {
+      "description": "URL pública do app",
+      "required": false
+    },
+    "NODE_ENV": {
+      "value": "production"
+    }
+  },
+  "healthcheckPath": "/api/health"
+}

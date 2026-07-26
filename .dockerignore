@@ -1,11 +1,12 @@
 mobile/
+node_modules/
+.next/
 docs/
 *.md
 .env
 .env.local
 .env.example
 .env.production
-nginx.conf
-scripts/deploy.sh
 tmp/
 logs/
+git/
