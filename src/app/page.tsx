@@ -5,33 +5,30 @@ import { desc, eq, count } from "drizzle-orm";
 import FreightCard from "@/components/FreightCard";
 import { UFS } from "@/lib/constants";
 import { IcUser, IcSearch, IcMsg, IcCheck, IcMap, IcChart, IcCalc, IcRefresh, IcStar, IcBell, IcPlus, IcTruck, IcTarget, IcShield } from "@/components/Icons";
-import { safeQuery } from "@/lib/db-query";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { data: latest, error: dbError } = await safeQuery(async () => {
-    const rows = await db
-      .select({ freight: freights, ownerName: users.name, ownerCompany: users.company })
-      .from(freights)
-      .innerJoin(users, eq(freights.userId, users.id))
-      .where(eq(freights.status, "ativo"))
-      .orderBy(desc(freights.createdAt))
-      .limit(6);
-    return rows;
-  });
+  let latest: any[] = [];
+  let freightCount = 0;
+  let userCount = 0;
+  let dbError = false;
 
-  const { data: freightCount } = await safeQuery(async () => {
-    return db.select({ c: count() }).from(freights).where(eq(freights.status, "ativo"));
-  });
-
-  const { data: userCount } = await safeQuery(async () => {
-    return db.select({ c: count() }).from(users);
-  });
+  try {
+    [latest, freightCount, userCount] = await Promise.all([
+      db.select({ freight: freights, ownerName: users.name, ownerCompany: users.company })
+        .from(freights).innerJoin(users, eq(freights.userId, users.id))
+        .where(eq(freights.status, "ativo")).orderBy(desc(freights.createdAt)).limit(6),
+      db.select({ c: count() }).from(freights).where(eq(freights.status, "ativo")).then(r => r[0]?.c || 0),
+      db.select({ c: count() }).from(users).then(r => r[0]?.c || 0),
+    ]);
+  } catch (e) {
+    console.error("[HOME] DB Error:", e);
+    dbError = true;
+  }
 
   return (
     <div>
-      {/* Hero */}
       <section
         className="relative bg-slate-900 text-white"
         style={{
@@ -65,41 +62,44 @@ export default async function HomePage() {
                 </select>
               </div>
               <div className="flex items-end">
-                <button type="submit" className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-2.5 rounded-lg transition-colors">🔍 Buscar fretes</button>
+                <button type="submit" className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-2.5 rounded-lg transition-colors">Buscar fretes</button>
               </div>
             </div>
           </form>
           <div className="mt-10 flex flex-wrap gap-8">
-            <div><p className="text-3xl font-extrabold text-orange-400">{freightCount?.[0]?.c?.toLocaleString("pt-BR") || "0"}</p><p className="text-sm text-slate-300">fretes ativos agora</p></div>
-            <div><p className="text-3xl font-extrabold text-orange-400">{userCount?.[0]?.c?.toLocaleString("pt-BR") || "0"}</p><p className="text-sm text-slate-300">usuários cadastrados</p></div>
+            <div><p className="text-3xl font-extrabold text-orange-400">{String(freightCount || 0)}</p><p className="text-sm text-slate-300">fretes ativos agora</p></div>
+            <div><p className="text-3xl font-extrabold text-orange-400">{String(userCount || 0)}</p><p className="text-sm text-slate-300">usuários cadastrados</p></div>
             <div><p className="text-3xl font-extrabold text-orange-400">27</p><p className="text-sm text-slate-300">estados atendidos</p></div>
           </div>
         </div>
       </section>
 
-      {/* Latest freights */}
       <section className="max-w-6xl mx-auto px-4 py-14">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Últimos fretes publicados</h2>
           <Link href="/fretes" className="text-orange-600 font-semibold text-sm hover:underline">Ver todos →</Link>
         </div>
         {dbError ? (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-6 text-center">
-            <p className="text-sm text-amber-800 dark:text-amber-300">Não foi possível carregar os fretes agora. O banco de dados pode estar inicializando.</p>
-            <Link href="/fretes" className="mt-3 inline-block text-orange-600 font-semibold text-sm hover:underline">Ir para a busca de fretes →</Link>
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-8 text-center">
+            <p className="text-3xl mb-3">⚠️</p>
+            <p className="text-sm text-amber-800 dark:text-amber-300 font-semibold">Não foi possível carregar os fretes agora.</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              Se você está no Vercel, configure a variável <code className="bg-amber-100 dark:bg-amber-900/40 px-1 rounded font-mono">DATABASE_URL</code> nas Environment Variables.<br/>
+              Depois rode: <code className="bg-amber-100 dark:bg-amber-900/40 px-1 rounded font-mono">npx drizzle-kit push</code> contra seu banco de produção.
+            </p>
+            <Link href="/fretes" className="mt-4 inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-colors">Ir para a busca de fretes →</Link>
           </div>
-        ) : latest?.length === 0 ? (
+        ) : latest.length === 0 ? (
           <p className="text-slate-500 dark:text-slate-400">Nenhum frete publicado ainda. Seja o primeiro!</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {latest?.map((row) => (
+            {latest.map((row) => (
               <FreightCard key={row.freight.id} freight={row.freight} ownerName={row.ownerName} ownerCompany={row.ownerCompany} />
             ))}
           </div>
         )}
       </section>
 
-      {/* How it works */}
       <section className="bg-white dark:bg-slate-900 border-y border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-14">
           <h2 className="text-2xl font-extrabold text-center text-slate-900 dark:text-white">Como funciona</h2>
@@ -107,8 +107,8 @@ export default async function HomePage() {
             {[
               { ic: <IcUser className="w-8 h-8" />, title: "1. Cadastre-se grátis", desc: "Crie sua conta como motorista ou embarcador em menos de 1 minuto." },
               { ic: <IcSearch className="w-8 h-8" />, title: "2. Encontre ou publique", desc: "Motoristas buscam cargas com filtros. Embarcadores publicam fretes em segundos." },
-              { ic: <IcTarget className="w-8 h-8" />, title: "3. Envie propostas", desc: "Motoristas enviam propostas online com valor e mensagem. Embarcadores aceitam ou recusam." },
-              { ic: <IcCheck className="w-8 h-8" />, title: "4. Negocie direto", desc: "Fale pelo chat interno ou WhatsApp. Sem taxas e sem intermediários." },
+              { ic: <IcTarget className="w-8 h-8" />, title: "3. Envie propostas", desc: "Motoristas enviam propostas online. Embarcadores aceitam ou recusam." },
+              { ic: <IcCheck className="w-8 h-8" />, title: "4. Negocie direto", desc: "Fale pelo chat interno ou WhatsApp. Sem intermediários." },
             ].map((s) => (
               <div key={s.title} className="text-center">
                 <div className="w-16 h-16 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center text-orange-500 mx-auto">{s.ic}</div>
@@ -120,7 +120,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Diferenciais */}
       <section className="max-w-6xl mx-auto px-4 py-14">
         <h2 className="text-2xl font-extrabold text-center text-slate-900 dark:text-white">Ferramentas exclusivas do FreteTruck</h2>
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -143,7 +142,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="max-w-6xl mx-auto px-4 pb-14">
         <div className="bg-slate-900 dark:bg-black rounded-3xl p-10 md:p-14 text-center text-white">
           <h2 className="text-3xl font-extrabold">Tem carga para transportar?</h2>
