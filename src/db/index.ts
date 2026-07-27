@@ -3,14 +3,33 @@ import { Pool } from "pg";
 
 const databaseUrl =
   process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@127.0.0.1:5432/missing_db_error_configure_vercel_env";
+  process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL_UNPOOLED ||
+  "";
 
-if (!process.env.DATABASE_URL) {
+if (!databaseUrl) {
   console.warn(
-    "⚠️ AVISO: DATABASE_URL não está definida nas Variáveis de Ambiente! Configure em Settings -> Environment Variables no Vercel."
+    "⚠️ DATABASE_URL não definida! Configure nas Environment Variables do Vercel/Railway/Render."
   );
 }
 
+// Configuração de SSL obrigatória para provedores cloud (Neon, Supabase, Railway, etc)
+function parseSslConfig() {
+  const url = databaseUrl || "";
+  const isNeon = url.includes("neon.tech") || url.includes("neon");
+  const isSupabase = url.includes("supabase");
+  const isRailway = url.includes("railway");
+  const isFly = url.includes("fly.dev");
+  const needsSsl = isNeon || isSupabase || isRailway || isFly || url.includes("sslmode=require");
+
+  if (needsSsl) {
+    // Neon e Supabase exigem SSL mas usam certificados próprios
+    return { rejectUnauthorized: false };
+  }
+  return false;
+}
+
+// Configuração do pool otimizada para serverless (Vercel) e long-running (Railway)
 const globalForDb = globalThis as typeof globalThis & {
   __arenaNextJsPostgresqlPool?: Pool;
 };
@@ -19,11 +38,15 @@ export const pool =
   globalForDb.__arenaNextJsPostgresqlPool ??
   new Pool({
     connectionString: databaseUrl,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    ssl: parseSslConfig(),
+    max: 5,
+    idleTimeoutMillis: 20000,
+    connectionTimeoutMillis: 10000,
+    // Neon com PgBouncer precisa disso
+    ...(databaseUrl.includes("neon") ? { application_name: "fretetruck" } : {}),
   });
 
+// Reutiliza o pool entre hot reloads em desenvolvimento
 if (process.env.NODE_ENV !== "production") {
   globalForDb.__arenaNextJsPostgresqlPool = pool;
 }
