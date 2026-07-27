@@ -1,0 +1,20 @@
+{
+  "version": "0.2",
+  "env": {
+    "variables": {
+      "NODE_ENV": "production"
+    }
+  },
+  "phases": {
+    "pre_build": {
+      "commands": ["npm ci"]
+    },
+    "build": {
+      "commands": ["npm run build"]
+    }
+  },
+  "artifacts": {
+    "files": ["**/*"],
+    "discard-paths": false
+  }
+}
