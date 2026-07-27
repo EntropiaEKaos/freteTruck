@@ -120,6 +120,9 @@ export default function AdminPage() {
           <Link href="/admin/logs" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
             Logs
           </Link>
+          <Link href="/admin/banco" className="text-xs font-bold px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
+            🗄️ Banco & Tabelas
+          </Link>
         </div>
       </div>
 

@@ -536,6 +536,38 @@ export const featureFlags = pgTable("feature_flags", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const truckCoupons = pgTable("truck_coupons", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 40 }).notNull().unique(),
+  trucks: integer("trucks").notNull(),
+  maxUses: integer("max_uses").notNull().default(100),
+  usedCount: integer("used_count").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userCoupons = pgTable("user_coupons", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  couponId: integer("coupon_id")
+    .notNull()
+    .references(() => truckCoupons.id, { onDelete: "cascade" }),
+  redeemedAt: timestamp("redeemed_at").defaultNow().notNull(),
+});
+
+export const contentReports = pgTable("content_reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  targetType: varchar("target_type", { length: 30 }).notNull(), // post | comment | freight
+  targetId: integer("target_id").notNull(),
+  reason: varchar("reason", { length: 60 }).notNull(),
+  details: text("details"),
+  status: varchar("status", { length: 20 }).notNull().default("pendente"), // pendente | resolvido | descartado
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ==================== TYPES ====================
 export type User = typeof users.$inferSelect;
 export type Freight = typeof freights.$inferSelect;
@@ -570,3 +602,6 @@ export type TrackingPosition = typeof trackingPositions.$inferSelect;
 export type FeedbackReport = typeof feedbackReports.$inferSelect;
 export type SystemAnnouncement = typeof systemAnnouncements.$inferSelect;
 export type FeatureFlag = typeof featureFlags.$inferSelect;
+export type TruckCoupon = typeof truckCoupons.$inferSelect;
+export type UserCoupon = typeof userCoupons.$inferSelect;
+export type ContentReport = typeof contentReports.$inferSelect;

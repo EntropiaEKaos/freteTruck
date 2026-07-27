@@ -396,6 +396,120 @@ export async function POST() {
       coverage varchar(30) NOT NULL,
       created_at timestamp DEFAULT now() NOT NULL
     );
+
+    -- Media uploads
+    CREATE TABLE IF NOT EXISTS media_uploads (
+      id serial PRIMARY KEY,
+      filename varchar(160) NOT NULL UNIQUE,
+      mime_type varchar(60) NOT NULL,
+      data_base64 text NOT NULL,
+      created_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Configurações de integração
+    CREATE TABLE IF NOT EXISTS integration_settings (
+      id serial PRIMARY KEY,
+      key varchar(80) NOT NULL UNIQUE,
+      value text,
+      category varchar(40) NOT NULL DEFAULT 'geral',
+      label varchar(160) NOT NULL,
+      description varchar(400),
+      is_secret boolean NOT NULL DEFAULT false,
+      is_public boolean NOT NULL DEFAULT false,
+      updated_by int,
+      updated_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Posições de rastreamento
+    CREATE TABLE IF NOT EXISTS tracking_positions (
+      id serial PRIMARY KEY,
+      freight_id int NOT NULL REFERENCES freights(id) ON DELETE CASCADE,
+      user_id int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      lat numeric(10,7) NOT NULL,
+      lng numeric(10,7) NOT NULL,
+      accuracy numeric(8,2),
+      speed_kmh numeric(6,2),
+      heading numeric(6,2),
+      source varchar(20) NOT NULL DEFAULT 'gps',
+      created_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Feedback reports
+    CREATE TABLE IF NOT EXISTS feedback_reports (
+      id serial PRIMARY KEY,
+      user_id int REFERENCES users(id) ON DELETE SET NULL,
+      name varchar(120),
+      email varchar(160),
+      type varchar(30) NOT NULL DEFAULT 'bug',
+      priority varchar(20) NOT NULL DEFAULT 'normal',
+      status varchar(20) NOT NULL DEFAULT 'novo',
+      page_url varchar(500),
+      message text NOT NULL,
+      user_agent varchar(300),
+      admin_note text,
+      created_at timestamp DEFAULT now() NOT NULL,
+      updated_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Comunicados
+    CREATE TABLE IF NOT EXISTS system_announcements (
+      id serial PRIMARY KEY,
+      title varchar(160) NOT NULL,
+      message text NOT NULL,
+      variant varchar(20) NOT NULL DEFAULT 'info',
+      link_label varchar(80),
+      link_url varchar(300),
+      active boolean NOT NULL DEFAULT true,
+      starts_at timestamp DEFAULT now() NOT NULL,
+      ends_at timestamp,
+      created_by int REFERENCES users(id) ON DELETE SET NULL,
+      created_at timestamp DEFAULT now() NOT NULL,
+      updated_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Feature flags
+    CREATE TABLE IF NOT EXISTS feature_flags (
+      id serial PRIMARY KEY,
+      key varchar(80) NOT NULL UNIQUE,
+      label varchar(160) NOT NULL,
+      description varchar(400),
+      enabled boolean NOT NULL DEFAULT false,
+      audience varchar(40) NOT NULL DEFAULT 'all',
+      updated_by int REFERENCES users(id) ON DELETE SET NULL,
+      updated_at timestamp DEFAULT now() NOT NULL,
+      created_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Cupons de Trucks
+    CREATE TABLE IF NOT EXISTS truck_coupons (
+      id serial PRIMARY KEY,
+      code varchar(40) NOT NULL UNIQUE,
+      trucks int NOT NULL,
+      max_uses int NOT NULL DEFAULT 100,
+      used_count int NOT NULL DEFAULT 0,
+      active boolean NOT NULL DEFAULT true,
+      created_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Cupons resgatados por usuário
+    CREATE TABLE IF NOT EXISTS user_coupons (
+      id serial PRIMARY KEY,
+      user_id int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      coupon_id int NOT NULL REFERENCES truck_coupons(id) ON DELETE CASCADE,
+      redeemed_at timestamp DEFAULT now() NOT NULL
+    );
+
+    -- Denúncias de moderação
+    CREATE TABLE IF NOT EXISTS content_reports (
+      id serial PRIMARY KEY,
+      user_id int REFERENCES users(id) ON DELETE SET NULL,
+      target_type varchar(30) NOT NULL,
+      target_id int NOT NULL,
+      reason varchar(60) NOT NULL,
+      details text,
+      status varchar(20) NOT NULL DEFAULT 'pendente',
+      created_at timestamp DEFAULT now() NOT NULL
+    );
   `;
 
   try {
@@ -427,10 +541,29 @@ export async function POST() {
       ON CONFLICT (key) DO NOTHING
     `);
 
+    await pool.query(`
+      INSERT INTO feature_flags (key, label, description, enabled, audience) VALUES
+        ('public_beta', 'Beta público', 'Exibe avisos e comportamentos do beta público.', true, 'all'),
+        ('mercado_pago_live', 'Mercado Pago produção', 'Ativa cobrança real em produção quando credenciais estiverem configuradas.', false, 'admin'),
+        ('gps_live_tracking', 'Rastreamento GPS ao vivo', 'Permite que motoristas compartilhem GPS real pelo navegador/app.', true, 'all'),
+        ('fiscal_module', 'Módulo CT-e / MDF-e', 'Mostra o módulo fiscal em modo homologação/simulado.', true, 'all'),
+        ('community_images', 'Imagens na comunidade', 'Permite upload de fotos em postagens sociais.', true, 'all')
+      ON CONFLICT (key) DO NOTHING;
+
+      INSERT INTO truck_coupons (code, trucks, max_uses, active) VALUES
+        ('BETA50', 50, 1000, true),
+        ('FRETETRUCK2025', 100, 500, true)
+      ON CONFLICT (code) DO NOTHING;
+
+      INSERT INTO system_announcements (title, message, variant, link_label, link_url, active)
+      VALUES ('Beta público FreteTruck', 'Estamos em fase de testes. Envie feedbacks e relatos de erro para melhorarmos a plataforma.', 'warning', 'Enviar feedback', '/feedback', true)
+      ON CONFLICT DO NOTHING;
+    `);
+
     return NextResponse.json({
       success: true,
       message: "✅ Schema aplicado com sucesso! Todas as tabelas foram criadas.",
-      tables_created: 27,
+      tables_created: 33,
     });
   } catch (e: any) {
     console.error("[SETUP ERROR]", e);

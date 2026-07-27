@@ -44,6 +44,8 @@ export async function POST(req: Request) {
       }
 
       // 1. Salvar no banco PostgreSQL (funciona em Vercel/serverless e em qualquer lugar)
+      const { ensureMediaUploadsTable } = await import("@/lib/media");
+      await ensureMediaUploadsTable();
       await db.insert(mediaUploads).values({
         filename,
         mimeType,

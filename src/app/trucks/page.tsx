@@ -16,6 +16,8 @@ export default function TrucksPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
   const [beta, setBeta] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [redeemBusy, setRedeemBusy] = useState(false);
 
   async function load() {
     const [w, p, o] = await Promise.all([
@@ -69,6 +71,31 @@ export default function TrucksPage() {
     setBusy(null);
   }
 
+  async function redeemCoupon(e: React.FormEvent) {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    setRedeemBusy(true);
+    setBeta("");
+    try {
+      const res = await fetch("/api/trucks/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBeta(data.message || "Cupom resgatado com sucesso!");
+        setCouponCode("");
+        await load();
+      } else {
+        alert(data.error || "Erro ao resgatar cupom.");
+      }
+    } catch {
+      alert("Erro de conexão ao resgatar cupom.");
+    }
+    setRedeemBusy(false);
+  }
+
   if (loading) return <div className="max-w-5xl mx-auto px-4 py-24 text-center text-slate-500">Carregando carteira de Trucks…</div>;
 
   return (
@@ -99,6 +126,36 @@ export default function TrucksPage() {
             <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50"><b className="text-orange-600">25 Trucks</b><p className="text-slate-500 mt-1">Bônus por indicação confirmada</p></div>
             <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50"><b className="text-orange-600">0% comissão</b><p className="text-slate-500 mt-1">Sobre o valor do frete</p></div>
           </div>
+        </div>
+      </div>
+
+      {/* Resgatar Cupom */}
+      <div className="mt-6 bg-gradient-to-r from-orange-500/10 to-amber-500/10 dark:from-orange-500/15 dark:to-amber-500/15 border border-orange-500/30 dark:border-orange-500/40 rounded-2xl p-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              🎁 Tem um código ou cupom promocional?
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              Insira o código promocional (ex: <code className="font-mono font-bold text-orange-500">BETA50</code> ou <code className="font-mono font-bold text-orange-500">FRETETRUCK2025</code>) para receber Trucks grátis!
+            </p>
+          </div>
+          <form onSubmit={redeemCoupon} className="flex items-center gap-2 w-full md:w-auto">
+            <input
+              type="text"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              placeholder="CÓDIGO (ex: BETA50)"
+              className="rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-mono font-bold uppercase text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none w-full md:w-48"
+            />
+            <button
+              type="submit"
+              disabled={redeemBusy || !couponCode.trim()}
+              className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl text-sm transition-colors shrink-0"
+            >
+              {redeemBusy ? "Resgatando..." : "Resgatar"}
+            </button>
+          </form>
         </div>
       </div>
 

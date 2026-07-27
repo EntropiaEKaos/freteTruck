@@ -51,6 +51,8 @@ export async function POST(req: Request) {
         if (buf.length <= 4 * 1024 * 1024) {
           const filename = `post_${user.id}_${Date.now()}.${ext}`;
           // 1. Salvar no PostgreSQL
+          const { ensureMediaUploadsTable } = await import("@/lib/media");
+          await ensureMediaUploadsTable();
           await db.insert(mediaUploads).values({
             filename,
             mimeType,

@@ -30,6 +30,8 @@ export async function PATCH(req: Request) {
         const ext = m[1] === "png" ? "png" : m[1] === "webp" ? "webp" : "jpg";
         const buf = Buffer.from(m[2], "base64");
         if (buf.length <= 4 * 1024 * 1024) {
+          const { ensureMediaUploadsTable } = await import("@/lib/media");
+          await ensureMediaUploadsTable();
           const filename = `avatar_${user.id}_${Date.now()}.${ext}`;
           await db.insert(mediaUploads).values({
             filename,

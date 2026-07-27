@@ -93,6 +93,18 @@ export default function ComunidadePage() {
     alert("Link copiado!");
   }
 
+  async function reportPost(postId: number) {
+    const reason = prompt("Por qual motivo deseja denunciar esta postagem? (ex: Spam, Conteúdo ofensivo, Informação falsa)");
+    if (!reason || !reason.trim()) return;
+    const res = await fetch("/api/community/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetType: "post", targetId: postId, reason }),
+    });
+    const data = await res.json();
+    alert(data.message || "Denúncia enviada!");
+  }
+
   if (loading) return <div className="max-w-2xl mx-auto px-4 py-24 text-center text-slate-500">Carregando comunidade…</div>;
 
   return (
@@ -189,6 +201,7 @@ export default function ComunidadePage() {
                   <IcMsg className="w-4 h-4" /> {p.post.commentCount}
                 </button>
                 <button onClick={() => share(p)} className="p-1.5 rounded-lg text-slate-400 hover:text-orange-500"><IcShare className="w-4 h-4" /></button>
+                <button onClick={() => reportPost(p.post.id)} title="Denunciar postagem" className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 text-xs">🚨</button>
               </div>
             </div>
 
