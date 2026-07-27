@@ -27,7 +27,7 @@
 10. [Deploy Vercel](#deploy-vercel)
 11. [Deploy Railway / Render / Fly.io](#deploy-railway--render--flyio)
 12. [Deploy AWS / GCP / Azure](#deploy-aws--gcp--azure)
-13. [Aplicativos Mobile (Planejamento)](#-aplicativos-mobile-planejamento)
+13. [Aplicativo Mobile](#-aplicativo-mobile)
 14. [API Reference](#-api-reference)
 15. [Seguranca](#-seguranca)
 16. [Contribuicao](#-contribuicao)
@@ -43,6 +43,7 @@ O **FreteTruck** é um clone evoluido do FreteBras — um marketplace que conect
 
 | Funcionalidade | FreteTruck | FreteBras |
 |---|---|---|
+| 🧠 Smart Match com Score de Oportunidade (0–100) | ✅ | ❌ |
 | 💬 Chat interno entre usuários | ✅ | ❌ |
 | 📨 Propostas/lances online | ✅ | ❌ |
 | ⭐ Avaliacoes e reputacao | ✅ | Parcial |
@@ -67,6 +68,7 @@ O **FreteTruck** é um clone evoluido do FreteBras — um marketplace que conect
 ## ✨ Funcionalidades
 
 ### Para Motoristas
+- **Smart Match de Cargas** - ranking personalizado com Score de Oportunidade de 0 a 100
 - **Buscar fretes** com 12+ filtros (origem, destino, tipo de caminhao, carroceria, carga, etc.)
 - **Enviar propostas online** com valor e mensagem
 - **Chat integrado** para negociar antes de fechar
@@ -95,6 +97,42 @@ O **FreteTruck** é um clone evoluido do FreteBras — um marketplace que conect
 - **Modo escuro** - interface adaptada para uso noturno
 - **Compartilhar frete** - copie link ou share nativo
 - **Responsivo** - funciona perfeitamente em desktop, tablet e mobile web
+
+### Smart Match e Score de Oportunidade
+
+A página autenticada `/oportunidades` ranqueia fretes ativos usando o perfil real do motorista e regras transparentes de negócio.
+
+**Critérios do score (0–100):**
+
+| Critério | Impacto máximo |
+|---|---:|
+| Valor por quilômetro | +22 pontos |
+| Frete acima do piso mínimo ANTT | +12 pontos |
+| Embarcador verificado | +10 pontos |
+| Origem no estado do motorista | +10 pontos |
+| Caminhão compatível | +8 pontos |
+| Carroceria compatível | +6 pontos |
+| Pedágio incluso | +5 pontos |
+| Incompatibilidade de veículo/carroceria | penalidade de até -25 pontos |
+
+**Classificação:**
+- `82–100`: Excelente
+- `68–81`: Boa
+- `50–67`: Regular
+- `0–49`: Atenção
+
+**Arquivos principais:**
+- `src/lib/freight-score.ts` — motor de score e justificativas
+- `src/app/api/matches/route.ts` — API autenticada de ranking
+- `src/app/oportunidades/page.tsx` — experiência Smart Match
+- `src/components/FreightCard.tsx` — selo e indicador visual do score
+
+**Endpoint:**
+```http
+GET /api/matches?minScore=68&limit=30
+```
+
+O endpoint retorna perfil aplicado, fretes ranqueados, score, classificação, margem sobre ANTT e motivos detalhados. O cálculo é assistivo e não substitui análise de custos, riscos, seguro e documentação.
 
 ---
 
@@ -418,7 +456,15 @@ az containerapp create --name fretetrack \
 
 ---
 
-## 📱 Aplicativos Mobile (Planejamento)
+## 📱 Aplicativo Mobile
+
+O app React Native + Expo já possui estrutura, cliente HTTP e telas iniciais em `mobile/`.
+
+**Incluído atualmente:** login, cadastro, recuperação de senha, busca e detalhe de fretes, publicação, chat, comunidade, perfil, carteira de Trucks e analytics. O app consome as mesmas APIs REST do projeto web.
+
+**Documentação:**
+- `mobile/README.md` — arquitetura e comandos rápidos
+- `mobile/MANUAL_BUILD.md` — conexão ao backend, Expo Go, EAS Build, APK/AAB, iOS e publicação nas lojas
 
 ### Visao geral do roadmap mobile:
 
@@ -538,6 +584,7 @@ POST   /api/referral            -> { code }               Gerar novo code
 
 GET    /api/tracking/:id        -> { position, progress, ETA, speed }
 GET    /api/stats                -> { routeStats[], byOrigin[], byDest[] }
+GET    /api/matches              -> { profile, opportunities[], generatedAt }  Ranking Smart Match autenticado
 
 GET    /api/profile/:id          -> { user, stats, badges, level, reviews }
 

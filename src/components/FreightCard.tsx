@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Freight } from "@/db/schema";
+import type { OpportunityScore } from "@/lib/freight-score";
 import { formatBRL, formatWeight, timeAgo } from "@/lib/constants";
 import { IcEye, IcWeight, IcPin, IcRadar, IcStar, IcCheck } from "./Icons";
 
@@ -8,11 +9,13 @@ export default function FreightCard({
   ownerName,
   ownerCompany,
   ownerVerified,
+  opportunity,
 }: {
   freight: Freight;
   ownerName: string;
   ownerCompany: string | null;
   ownerVerified?: boolean;
+  opportunity?: OpportunityScore;
 }) {
   const vehicles = freight.vehicleTypes.split(",").slice(0, 3);
   const priceLabel =
@@ -31,6 +34,21 @@ export default function FreightCard({
       href={`/fretes/${freight.id}`}
       className="block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500 hover:shadow-md transition-all p-5"
     >
+      {/* Opportunity score */}
+      {opportunity && (
+        <div className="flex items-center justify-between gap-2 mb-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 px-3 py-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Score de oportunidade</p>
+            <p className={`text-xs font-bold ${opportunity.score >= 82 ? "text-emerald-600" : opportunity.score >= 68 ? "text-blue-600" : opportunity.score >= 50 ? "text-amber-600" : "text-red-500"}`}>
+              {opportunity.label}
+            </p>
+          </div>
+          <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black border-4 ${opportunity.score >= 82 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : opportunity.score >= 68 ? "bg-blue-50 text-blue-700 border-blue-200" : opportunity.score >= 50 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-600 border-red-200"}`}>
+            {opportunity.score}
+          </div>
+        </div>
+      )}
+
       {/* Featured badge */}
       {freight.featured && (
         <div className="flex items-center gap-1 mb-2">

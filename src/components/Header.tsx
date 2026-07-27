@@ -97,6 +97,7 @@ export default function Header() {
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-0 flex-wrap">
           {PUBLIC_NAV.map((n) => <NL key={n.href} href={n.href} icon={n.icon} label={n.label} path={p} />)}
+          {me && <NL href="/oportunidades" icon={<IcBrain className="w-4 h-4" />} label="Smart Match" path={p} />}
           {me && <NL href="/chat" icon={<IcMsg className="w-4 h-4" />} label="Chat" path={p} />}
           {me && <NL href="/painel" icon={<IcGrid className="w-4 h-4" />} label="Painel" path={p} />}
           {me && <NL href="/trucks" icon={<IcTruck className="w-4 h-4" />} label="Trucks" path={p} />}
@@ -183,7 +184,7 @@ export default function Header() {
               <Link key={h} href={h} onClick={close} className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50">{l}</Link>
             ))}
             {me && <><div className="border-t border-slate-800 my-2" />
-              {[["/chat", "Chat"], ["/painel", "Painel"], ["/documentos", "Documentos"], ["/trucks", "Trucks"],
+              {[["/oportunidades", "Smart Match"], ["/chat", "Chat"], ["/painel", "Painel"], ["/documentos", "Documentos"], ["/trucks", "Trucks"],
                 ["/fiscal", "Fiscal"], ["/convite", "Convites"], [`/perfil/${me.id}`, "Perfil"],
                 ...(me.role === "admin" ? [["/admin", "Admin"], ["/admin/monetizacao", "Monetização"]] as [string, string][] : []),
               ].map(([h, l]) => (
