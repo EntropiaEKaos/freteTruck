@@ -76,8 +76,13 @@ export default function ProfilePage() {
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="bg-gradient-to-r from-slate-900 to-slate-700 p-8 text-white">
           <div className="flex items-center gap-5 flex-wrap">
-            <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-3xl font-extrabold shrink-0">
-              {u.name.charAt(0).toUpperCase()}
+            <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center text-3xl font-extrabold shrink-0 overflow-hidden border-2 border-white/20">
+              {(u as any).avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={(u as any).avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+              ) : (
+                u.name.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-extrabold">{u.name}</h1>

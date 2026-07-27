@@ -9,7 +9,7 @@ import {
   IcShield, IcBrain, IcTrophy, IcUsers, IcBuilding, IcSun, IcMoon, IcLogout, IcMenu, IcHome, IcTarget,
 } from "./Icons";
 
-type Me = { id: number; name: string; role: string } | null;
+type Me = { id: number; name: string; role: string; avatarUrl?: string | null } | null;
 type Notif = { id: number; title: string; body: string | null; link: string | null; read: boolean; createdAt: string };
 
 const PUBLIC_NAV = [
@@ -142,7 +142,15 @@ export default function Header() {
           <div className="hidden md:flex items-center gap-1 ml-1">
             {!loaded ? null : me ? (
               <>
-                <Link href={`/perfil/${me.id}`} className="text-sm text-slate-300 hover:text-white px-2 transition-colors whitespace-nowrap">
+                <Link href={`/perfil/${me.id}`} className="flex items-center gap-2 text-sm text-slate-300 hover:text-white px-2 transition-colors whitespace-nowrap">
+                  <div className="w-7 h-7 rounded-full bg-orange-500 text-white font-extrabold text-xs flex items-center justify-center overflow-hidden border border-white/20">
+                    {me.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={me.avatarUrl} alt={me.name} className="w-full h-full object-cover" />
+                    ) : (
+                      me.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
                   <span className="font-medium text-white truncate max-w-[100px] inline-block">{me.name.split(" ")[0]}</span>
                 </Link>
                 <button onClick={logout} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" title="Sair">

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { posts, users } from "@/db/schema";
+import { posts, mediaUploads, users } from "@/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -43,18 +43,29 @@ export async function POST(req: Request) {
   let imageUrl: string | null = null;
   if (b.imageData && typeof b.imageData === "string" && b.imageData.startsWith("data:image/")) {
     try {
-      const { writeFileSync, mkdirSync, existsSync } = await import("fs");
-      const { join } = await import("path");
-      const dir = join(process.cwd(), "public", "uploads");
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
       const m = b.imageData.match(/^data:image\/(\w+);base64,(.+)$/);
       if (m) {
+        const mimeType = `image/${m[1]}`;
         const ext = m[1] === "png" ? "png" : m[1] === "webp" ? "webp" : "jpg";
         const buf = Buffer.from(m[2], "base64");
         if (buf.length <= 4 * 1024 * 1024) {
           const filename = `post_${user.id}_${Date.now()}.${ext}`;
-          writeFileSync(join(dir, filename), buf);
-          imageUrl = `/uploads/${filename}`;
+          // 1. Salvar no PostgreSQL
+          await db.insert(mediaUploads).values({
+            filename,
+            mimeType,
+            dataBase64: b.imageData,
+          });
+          imageUrl = `/api/uploads/${filename}`;
+
+          // 2. Tentar salvar no disco local (fallback dev)
+          try {
+            const { writeFileSync, mkdirSync, existsSync } = await import("fs");
+            const { join } = await import("path");
+            const dir = join(process.cwd(), "public", "uploads");
+            if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+            writeFileSync(join(dir, filename), buf);
+          } catch {}
         }
       }
     } catch (e) {

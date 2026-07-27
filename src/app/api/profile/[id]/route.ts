@@ -68,6 +68,7 @@ export async function GET(_req: Request, { params }: Params) {
       state: user.state,
       vehicleType: user.vehicleType,
       bodyType: user.bodyType,
+      avatarUrl: user.avatarUrl,
       createdAt: user.createdAt,
     },
     stats: {

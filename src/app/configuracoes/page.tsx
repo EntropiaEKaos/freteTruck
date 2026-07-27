@@ -21,6 +21,7 @@ export default function ConfigPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [avatarData, setAvatarData] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me").then(r => r.json()).then(d => {
@@ -42,10 +43,14 @@ export default function ConfigPage() {
     setError(""); setMsg("");
     setSaving(true);
     try {
-      const res = await fetch("/api/auth/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const res = await fetch("/api/auth/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, avatarData }) });
       const data = await res.json();
       if (!res.ok) { setError(data.error); return; }
       setMsg("Perfil atualizado com sucesso!");
+      if (data.user?.avatarUrl) {
+        setMe(data.user);
+        setAvatarData(null);
+      }
       setTimeout(() => setMsg(""), 3000);
     } finally { setSaving(false); }
   }
@@ -81,6 +86,43 @@ export default function ConfigPage() {
         <h2 className="font-bold text-slate-900 dark:text-white">Dados do perfil</h2>
         {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-2 text-sm">{error}</div>}
         {msg && <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg px-4 py-2 text-sm">{msg}</div>}
+
+        {/* Avatar section */}
+        <div className="flex items-center gap-4 py-2 border-b border-slate-100 dark:border-slate-700">
+          <div className="w-16 h-16 rounded-full bg-orange-500 text-white font-extrabold text-2xl flex items-center justify-center overflow-hidden shrink-0 border-2 border-slate-200 dark:border-slate-600">
+            {avatarData || me.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarData || me.avatarUrl} alt={me.name} className="w-full h-full object-cover" />
+            ) : (
+              me.name?.charAt(0).toUpperCase() || "U"
+            )}
+          </div>
+          <div>
+            <p className="font-semibold text-sm text-slate-900 dark:text-white">Foto de perfil</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">JPG, PNG ou WEBP até 4MB</p>
+            <label className="mt-2 inline-block cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+              Alterar foto
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 4 * 1024 * 1024) { alert("Arquivo muito grande (máximo 4MB)."); return; }
+                  const reader = new FileReader();
+                  reader.onload = () => setAvatarData(reader.result as string);
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
+            {avatarData && (
+              <button type="button" onClick={() => setAvatarData(null)} className="ml-2 text-xs text-red-500 hover:underline">
+                Cancelar nova foto
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div><label className={labelCls}>Nome completo</label><input value={form.name} onChange={e => set("name", e.target.value)} className={inputCls} /></div>

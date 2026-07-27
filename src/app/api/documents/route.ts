@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { documents, users } from "@/db/schema";
+import { documents, mediaUploads, users } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
@@ -28,32 +28,41 @@ export async function POST(req: Request) {
   let fileUrl = "";
 
   if (b.fileData && typeof b.fileData === "string" && b.fileData.startsWith("data:")) {
-    // Real base64 upload — save to public/uploads/
     try {
-      const uploadsDir = join(process.cwd(), "public", "uploads");
-      if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
-
       const matches = b.fileData.match(/^data:([^;]+);base64,(.+)$/);
       if (!matches) return NextResponse.json({ error: "Formato de arquivo inválido." }, { status: 400 });
 
-      const ext = matches[1].includes("pdf") ? "pdf" : matches[1].includes("png") ? "png" : "jpg";
+      const mimeType = matches[1];
+      const ext = mimeType.includes("pdf") ? "pdf" : mimeType.includes("png") ? "png" : "jpg";
       const filename = `doc_${user.id}_${b.docType}_${Date.now()}.${ext}`;
-      const buffer = Buffer.from(matches[2], "base64");
+      const base64Data = matches[2];
+      const buffer = Buffer.from(base64Data, "base64");
 
       // Limit 5MB
       if (buffer.length > 5 * 1024 * 1024) {
         return NextResponse.json({ error: "Arquivo muito grande (max 5MB)." }, { status: 400 });
       }
 
-      writeFileSync(join(uploadsDir, filename), buffer);
-      fileUrl = `/uploads/${filename}`;
+      // 1. Salvar no banco PostgreSQL (funciona em Vercel/serverless e em qualquer lugar)
+      await db.insert(mediaUploads).values({
+        filename,
+        mimeType,
+        dataBase64: b.fileData,
+      });
+      fileUrl = `/api/uploads/${filename}`;
+
+      // 2. Opcional/Fallback: tentar salvar no disco (para dev local se public/uploads for gravável)
+      try {
+        const uploadsDir = join(process.cwd(), "public", "uploads");
+        if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
+        writeFileSync(join(uploadsDir, filename), buffer);
+      } catch {}
     } catch (err) {
       console.error("Upload error:", err);
-      return NextResponse.json({ error: "Erro ao salvar arquivo." }, { status: 500 });
+      return NextResponse.json({ error: "Erro ao salvar arquivo no banco." }, { status: 500 });
     }
   } else {
-    // Simulated upload for demo/testing
-    fileUrl = `/uploads/demo_${b.docType}_${user.id}.jpg`;
+    fileUrl = `/api/uploads/demo_${b.docType}_${user.id}.jpg`;
   }
 
   const [doc] = await db.insert(documents).values({

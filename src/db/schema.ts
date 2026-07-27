@@ -455,6 +455,14 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const mediaUploads = pgTable("media_uploads", {
+  id: serial("id").primaryKey(),
+  filename: varchar("filename", { length: 160 }).notNull().unique(),
+  mimeType: varchar("mime_type", { length: 60 }).notNull(),
+  dataBase64: text("data_base64").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ==================== TYPES ====================
 export type User = typeof users.$inferSelect;
 export type Freight = typeof freights.$inferSelect;
@@ -483,3 +491,4 @@ export type Session = typeof sessions.$inferSelect;
 export type PostComment = typeof postComments.$inferSelect;
 export type CommentLike = typeof commentLikes.$inferSelect;
 export type FiscalEvent = typeof fiscalEvents.$inferSelect;
+export type MediaUpload = typeof mediaUploads.$inferSelect;

@@ -15,6 +15,7 @@ export async function GET() {
       city: user.city,
       state: user.state,
       verified: user.verified,
+      avatarUrl: user.avatarUrl,
       credits: user.credits ? parseFloat(user.credits.toString()) : 0,
     },
   });
