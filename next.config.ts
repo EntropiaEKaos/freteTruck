@@ -3,25 +3,19 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
-  // Garante que imagens estáticas do /public funcionem
-  output: "standalone",
-
-  images: {
-    unoptimized: true, // Necessário para hero.jpg e uploads funcionarem
-  },
-
+  // Headers para cache de assets estáticos e APIs
   async headers() {
     return [
       {
-        source: "/uploads/(.*)",
+        source: "/images/(.*)",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=86400, immutable" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
         ],
       },
       {
-        source: "/images/(.*)",
+        source: "/uploads/(.*)",
         headers: [
-          { key: "Cache-Control", value: "public, max-age=86400, immutable" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
         ],
       },
       {

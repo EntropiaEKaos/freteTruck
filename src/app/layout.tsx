@@ -13,16 +13,43 @@ export const metadata: Metadata = {
     { rel: "icon", url: "/icon-192.png", sizes: "192x192" },
     { rel: "apple-touch-icon", url: "/icon-512.png" },
   ],
-  other: {
-    "mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://fretetruck.app",
+    siteName: "FreteTruck",
+    title: "FreteTruck — Marketplace de Fretes Brasileiro",
+    description: "Conectamos caminhoneiros e embarcadores em todo o Brasil. Grátis para motoristas.",
+    images: [{ url: "/icon-512.png", width: 512, height: 512 }],
   },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "FreteTruck",
+              "description": "Marketplace de fretes que conecta caminhoneiros e embarcadores no Brasil.",
+              "applicationCategory": "BusinessApplication",
+              "operatingSystem": "Web",
+              "url": "https://fretetruck.app",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "BRL",
+                "description": "Gratuito para motoristas",
+              },
+            }),
+          }}
+        />
+      </head>
       <body className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col transition-colors">
         <BetaBanner />
         <Header />
@@ -61,13 +88,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <ul className="space-y-2 text-sm">
                 <li><Link href="/ajuda" className="hover:text-white transition-colors">Central de ajuda</Link></li>
                 <li><Link href="/sobre" className="hover:text-white transition-colors">Sobre o FreteTruck</Link></li>
+                <li><Link href="/status" className="hover:text-white transition-colors">Status do sistema</Link></li>
                 <li><Link href="/documentos" className="hover:text-white transition-colors">Verificação de documentos</Link></li>
-              </ul>
-              <p className="mt-4 text-xs text-slate-500">Para quem é:</p>
-              <ul className="space-y-1 text-xs text-slate-500">
-                <li>Caminhoneiros autônomos</li>
-                <li>Embarcadores e indústrias</li>
-                <li>Transportadoras e cooperativas</li>
               </ul>
             </div>
           </div>
@@ -77,7 +99,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div className="flex gap-3">
               <Link href="/termos" className="hover:text-white transition-colors">Termos de uso</Link>
               <Link href="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
+              <Link href="/status" className="hover:text-white transition-colors">Status</Link>
             </div>
+            <span className="hidden sm:inline">·</span>
+            <span className="font-mono">v1.0.0-beta</span>
           </div>
         </footer>
       </body>
