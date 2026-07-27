@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import confetti from "canvas-confetti";
 
 type Doc = { id: number; docType: string; fileUrl: string; status: string; reviewComment: string | null; createdAt: string };
 
@@ -19,6 +21,8 @@ export default function DocumentosPage() {
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingType, setPendingType] = useState<string | null>(null);
+  const [scannerActive, setScannerActive] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
 
   async function load() {
     const res = await fetch("/api/documents").then(r => r.json());
@@ -41,31 +45,55 @@ export default function DocumentosPage() {
     setUploading(pendingType);
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("Arquivo muito grande (máximo 5MB)."); setUploading(null); return;
+      toast.error("Arquivo muito grande (máximo 5MB)."); 
+      setUploading(null); 
+      return;
     }
 
     try {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = reader.result as string;
+        
+        // Simulação de Inteligência Artificial OCR (Visual Feedback)
+        setScannerActive(true);
+        setScanProgress(0);
+        
+        const interval = setInterval(() => {
+          setScanProgress((p) => {
+            if (p >= 90) { clearInterval(interval); return 90; }
+            return p + 15;
+          });
+        }, 150);
+
         const res = await fetch("/api/documents", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ docType: pendingType, fileData: base64 }),
         });
-        if (!res.ok) {
-          const d = await res.json();
-          setError(d.error || "Erro ao enviar.");
-        } else {
-          await load();
-        }
-        setUploading(null);
-        setPendingType(null);
+        
+        clearInterval(interval);
+        setScanProgress(100);
+        
+        setTimeout(async () => {
+          setScannerActive(false);
+          if (!res.ok) {
+            const d = await res.json();
+            toast.error(d.error || "Erro ao enviar.");
+          } else {
+            toast.success("Documento recebido e pré-analisado com sucesso!");
+            confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+            await load();
+          }
+          setUploading(null);
+          setPendingType(null);
+        }, 800);
       };
       reader.readAsDataURL(file);
     } catch {
-      setError("Erro ao ler arquivo.");
+      toast.error("Erro ao ler arquivo.");
       setUploading(null);
+      setScannerActive(false);
     }
     e.target.value = "";
   }
@@ -83,7 +111,32 @@ export default function DocumentosPage() {
   if (loading) return <div className="max-w-2xl mx-auto px-4 py-24 text-center text-slate-500">Carregando...</div>;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
+    <div className="max-w-2xl mx-auto px-4 py-10 relative">
+      {scannerActive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-slate-700 overflow-hidden relative">
+            {/* Linha de Scanner que sobe e desce */}
+            <div className="absolute left-0 right-0 h-1 bg-orange-500/50 shadow-[0_0_15px_#f97316] animate-scan z-0" />
+            
+            <div className="text-6xl mb-4 relative z-10">📸</div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white relative z-10">
+              {scanProgress === 100 ? "Concluído!" : "Analisando Documento..."}
+            </h3>
+            <p className="text-sm text-slate-500 mt-2 relative z-10">
+              Lendo informações com OCR (Inteligência Artificial)
+            </p>
+            
+            <div className="mt-6 w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden relative z-10">
+              <div 
+                className="h-full bg-orange-500 transition-all duration-300 ease-out"
+                style={{ width: `${scanProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-orange-500 font-bold mt-2 relative z-10">{scanProgress}%</p>
+          </div>
+        </div>
+      )}
+
       <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleFileSelected} />
 
       <div className="flex items-center justify-between flex-wrap gap-3">

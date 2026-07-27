@@ -34,7 +34,14 @@ export default async function DactePage({ params }: { params: Promise<{ id: stri
         <PrintButton />
       </div>
 
-      <div className="bg-white text-slate-900 rounded-3xl border-2 border-slate-300 p-8 shadow-xl print:border-none print:shadow-none">
+      <div className="relative bg-white text-slate-900 rounded-3xl border-2 border-slate-300 p-8 shadow-2xl print:border-none print:shadow-none overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow">
+        
+        {/* Marca d'água de homologação */}
+        {doc.status !== "autorizado_simulado" && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
+            <span className="text-[150px] font-black -rotate-45 text-red-500 whitespace-nowrap">SEM VALIDADE</span>
+          </div>
+        )}
         {/* Header */}
         <div className="border-b-2 border-slate-900 pb-4 flex items-start justify-between">
           <div>
@@ -60,14 +67,15 @@ export default async function DactePage({ params }: { params: Promise<{ id: stri
 
         {/* Status */}
         <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="p-3 border border-slate-200 rounded-lg">
+          <div className="p-3 border border-slate-200 rounded-lg relative overflow-hidden">
+            {doc.status === "autorizado_simulado" && <div className="absolute inset-0 bg-emerald-500/10 pointer-events-none" />}
             <p className="text-[10px] uppercase font-bold text-slate-400">Situação</p>
             <p className="font-bold mt-0.5">
-              {doc.status === "autorizado_simulado" ? "Autorizado (homologação)" :
-               doc.status === "encerrado_simulado" ? "Encerrado" :
-               doc.status === "cancelado" ? "Cancelado" : "Pendente"}
+              {doc.status === "autorizado_simulado" ? <span className="text-emerald-700">Autorizado (homologação)</span> :
+               doc.status === "encerrado_simulado" ? <span className="text-blue-700">Encerrado</span> :
+               doc.status === "cancelado" ? <span className="text-red-600">Cancelado</span> : "Pendente"}
             </p>
-            {doc.protocol && <p className="text-[10px] text-slate-500 mt-0.5">Prot.: {doc.protocol}</p>}
+            {doc.protocol && <p className="text-[10px] text-slate-500 mt-0.5 font-mono">Prot.: {doc.protocol}</p>}
           </div>
           <div className="p-3 border border-slate-200 rounded-lg">
             <p className="text-[10px] uppercase font-bold text-slate-400">Emissão</p>

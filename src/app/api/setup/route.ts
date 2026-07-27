@@ -510,25 +510,6 @@ export async function POST() {
       status varchar(20) NOT NULL DEFAULT 'pendente',
       created_at timestamp DEFAULT now() NOT NULL
     );
-
-    -- Roadmap e Votos
-    CREATE TABLE IF NOT EXISTS roadmap_features (
-      id serial PRIMARY KEY,
-      title varchar(120) NOT NULL UNIQUE,
-      description varchar(400) NOT NULL,
-      category varchar(30) NOT NULL,
-      status varchar(20) NOT NULL DEFAULT 'planejado',
-      votes_count int NOT NULL DEFAULT 0,
-      created_at timestamp DEFAULT now() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS roadmap_votes (
-      id serial PRIMARY KEY,
-      feature_id int NOT NULL REFERENCES roadmap_features(id) ON DELETE CASCADE,
-      user_id int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      created_at timestamp DEFAULT now() NOT NULL,
-      CONSTRAINT unique_user_feature_vote UNIQUE(user_id, feature_id)
-    );
   `;
 
   try {
@@ -577,22 +558,12 @@ export async function POST() {
       INSERT INTO system_announcements (title, message, variant, link_label, link_url, active)
       VALUES ('Beta público FreteTruck', 'Estamos em fase de testes. Envie feedbacks e relatos de erro para melhorarmos a plataforma.', 'warning', 'Enviar feedback', '/feedback', true)
       ON CONFLICT DO NOTHING;
-
-      INSERT INTO roadmap_features (title, description, category, status, votes_count) VALUES
-        ('Circuito Inteligente de Fretes', 'Sugere rotas circulares (Ida + Retorno + Carga Intermediária) para maximizar faturamento semanal e evitar rodar vazio.', 'motorista', 'planejado', 42),
-        ('Integração com WhatsApp Real (Bot)', 'Receba notificações e envie propostas direto no WhatsApp sem abrir o aplicativo.', 'social', 'em_desenvolvimento', 88),
-        ('Emissão real de CT-e / MDF-e via SEFAZ', 'Suporte à assinatura com Certificado A1 e emissão oficial para a SEFAZ com DACTE em PDF real.', 'fiscal', 'em_desenvolvimento', 124),
-        ('Reações de Emojis no Mural', 'Interaja com posts e comentários usando emojis divertidos como 🔥, 👏, 🚛, 💡.', 'social', 'planejado', 29),
-        ('Calculadora Avançada com Consumo Real', 'Integração com preços de diesel por posto e cálculos de desgaste real por tipo de caminhão.', 'motorista', 'planejado', 35),
-        ('Score de Crédito do Embarcador', 'Classificação financeira do contratante baseada em pagamentos anteriores, CNPJ e histórico na plataforma.', 'embarcador', 'planejado', 67),
-        ('Inclusão de Comprovante de Entrega por Foto no App', 'O motorista fotografa o canhoto assinado e anexa direto no comprovante digital (POD).', 'fiscal', 'planejado', 95)
-      ON CONFLICT (title) DO NOTHING;
     `);
 
     return NextResponse.json({
       success: true,
       message: "✅ Schema aplicado com sucesso! Todas as tabelas foram criadas.",
-      tables_created: 35,
+      tables_created: 33,
     });
   } catch (e: any) {
     console.error("[SETUP ERROR]", e);

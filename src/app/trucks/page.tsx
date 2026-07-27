@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatBRL } from "@/lib/constants";
 import { IcTruck, IcWallet, IcShield, IcCheck, IcRefresh } from "@/components/Icons";
+import toast from "react-hot-toast";
+import confetti from "canvas-confetti";
 
 type Wallet = { balance: number; lifetimeEarned: number; lifetimeSpent: number };
 type Product = { id: number; code: string; name: string; description: string | null; trucks: number; priceCents: number; active: boolean };
@@ -51,13 +53,15 @@ export default function TrucksPage() {
   async function pay(orderId: number) {
     setBusy(orderId);
     setBeta("");
+    const toastId = toast.loading("Preparando checkout...");
+    
     // Tenta checkout Mercado Pago primeiro
     const res = await fetch(`/api/trucks/orders/${orderId}/checkout`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
     const data = await res.json();
-    if (!res.ok) { alert(data.error || "Erro no pagamento."); setBusy(null); return; }
+    if (!res.ok) { toast.error(data.error || "Erro no pagamento.", { id: toastId }); setBusy(null); return; }
 
     if (data.provider === "mercadopago" && data.checkoutUrl) {
-      // Redireciona para o Mercado Pago (Checkout Pro com PIX, cartão, etc.)
+      toast.success("Redirecionando para o Mercado Pago...", { id: toastId });
       window.location.href = data.checkoutUrl;
       return;
     }
@@ -65,8 +69,13 @@ export default function TrucksPage() {
     // Fallback beta/manual
     const payRes = await fetch(`/api/trucks/orders/${orderId}/pay`, { method: "POST" });
     const payData = await payRes.json();
-    if (!payRes.ok) alert(payData.error || "Erro no pagamento.");
-    else setBeta(payData.message || "Trucks creditados.");
+    if (!payRes.ok) {
+      toast.error(payData.error || "Erro no pagamento.", { id: toastId });
+    } else {
+      toast.success("Pagamento confirmado! Trucks creditados.", { id: toastId });
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      setBeta(payData.message || "Trucks creditados.");
+    }
     await load();
     setBusy(null);
   }
@@ -76,6 +85,8 @@ export default function TrucksPage() {
     if (!couponCode.trim()) return;
     setRedeemBusy(true);
     setBeta("");
+    const toastId = toast.loading("Verificando código...");
+    
     try {
       const res = await fetch("/api/trucks/coupon", {
         method: "POST",
@@ -84,14 +95,16 @@ export default function TrucksPage() {
       });
       const data = await res.json();
       if (res.ok) {
+        toast.success("Cupom ativado! Trucks creditados.", { id: toastId });
+        confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ["#f97316", "#fbbf24"] });
         setBeta(data.message || "Cupom resgatado com sucesso!");
         setCouponCode("");
         await load();
       } else {
-        alert(data.error || "Erro ao resgatar cupom.");
+        toast.error(data.error || "Erro ao resgatar cupom.", { id: toastId });
       }
     } catch {
-      alert("Erro de conexão ao resgatar cupom.");
+      toast.error("Erro de conexão.", { id: toastId });
     }
     setRedeemBusy(false);
   }

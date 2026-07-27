@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import type { FiscalDocument, FiscalEvent } from "@/db/schema";
 import { timeAgo } from "@/lib/constants";
 import { IcDoc, IcCheck, IcX, IcShield } from "@/components/Icons";
+import toast from "react-hot-toast";
+import confetti from "canvas-confetti";
 
 const EVENT_LABELS: Record<string, string> = {
   emissao: "Autorização de uso",
@@ -41,16 +43,31 @@ export default function FiscalDetailPage() {
   async function runAction(action: string, withReason?: string) {
     setBusy(true);
     setError("");
+    const loadingToast = toast.loading("Processando...");
+    
     const res = await fetch(`/api/fiscal/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, reason: withReason }),
     });
     const data = await res.json();
-    if (!res.ok) { setError(data.error || "Erro na operação."); setBusy(false); return; }
-    setModal(null);
-    setReason("");
-    await load();
+    
+    toast.dismiss(loadingToast);
+    
+    if (!res.ok) {
+      toast.error(data.error || "Erro na operação.");
+      setError(data.error || "Erro na operação.");
+    } else {
+      setModal(null);
+      setReason("");
+      if (action === "emitir") {
+        toast.success("Autorizado pela SEFAZ!");
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      } else {
+        toast.success("Operação realizada com sucesso!");
+      }
+      await load();
+    }
     setBusy(false);
   }
 

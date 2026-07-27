@@ -10,6 +10,7 @@ import FreightCard from "@/components/FreightCard";
 import ShareButton from "@/components/ShareButton";
 import FreightQRCode from "@/components/FreightQRCode";
 import { calculateANTTFloor, detectCargoCategory } from "@/lib/antt";
+import { WeatherWidget } from "@/components/WeatherWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +118,11 @@ export default async function FreightDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
           {f.status === "fechado" && <div className="mt-4 bg-red-500/20 border border-red-500 text-red-200 rounded-lg px-4 py-2 text-sm font-semibold">⚠️ Este frete já foi fechado.</div>}
+          
+          <div className="mt-6 pt-6 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <WeatherWidget city={f.originCity} state={f.originState} type="origin" />
+            <WeatherWidget city={f.destCity} state={f.destState} type="dest" />
+          </div>
         </div>
 
         <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">

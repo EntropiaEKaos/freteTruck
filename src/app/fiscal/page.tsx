@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { Freight, FiscalDocument } from "@/db/schema";
 import { formatBRL, timeAgo } from "@/lib/constants";
 import { IcDoc, IcShield, IcCheck, IcX, IcTruck } from "@/components/Icons";
+import toast from "react-hot-toast";
+import confetti from "canvas-confetti";
 
 type FiscalRow = { document: FiscalDocument; freight: Freight };
 type FreightRow = { freight: Freight; ownerName: string; ownerCompany: string | null };
@@ -32,17 +34,26 @@ export default function FiscalPage() {
   useEffect(() => { load(); }, []);
 
   async function createDoc() {
-    if (!selectedFreight) return setError("Selecione um frete.");
+    if (!selectedFreight) { toast.error("Selecione um frete."); return; }
     setError("");
     setCreating(true);
+    
+    // Animação de scanner falso
+    const loadingToast = toast.loading("Gerando XML e calculando impostos...");
+    
     const res = await fetch("/api/fiscal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ freightId: selectedFreight, docType }),
     });
     const data = await res.json();
-    if (!res.ok) setError(data.error || "Erro ao criar documento.");
-    else {
+    
+    toast.dismiss(loadingToast);
+    
+    if (!res.ok) {
+      toast.error(data.error || "Erro ao criar documento.");
+    } else {
+      toast.success("Rascunho fiscal gerado com sucesso!");
       setSelectedFreight("");
       await load();
     }
@@ -51,14 +62,28 @@ export default function FiscalPage() {
 
   async function action(id: number, actionName: "emitir" | "cancelar") {
     setBusy(id);
+    const loadingToast = toast.loading(actionName === "emitir" ? "Conectando à SEFAZ..." : "Enviando evento de cancelamento...");
+    
     const res = await fetch(`/api/fiscal/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: actionName }),
+      body: JSON.stringify({ action: actionName, reason: actionName === "cancelar" ? "Cancelamento a pedido do usuário" : undefined }),
     });
     const data = await res.json();
-    if (!res.ok) alert(data.error || "Erro na operação.");
-    await load();
+    
+    toast.dismiss(loadingToast);
+    
+    if (!res.ok) {
+      toast.error(data.error || "Erro na operação.");
+    } else {
+      if (actionName === "emitir") {
+        toast.success("Documento autorizado pela SEFAZ!");
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#10b981", "#34d399", "#ffffff"] });
+      } else {
+        toast.success("Documento cancelado.");
+      }
+      await load();
+    }
     setBusy(null);
   }
 
