@@ -493,6 +493,49 @@ export const mediaUploads = pgTable("media_uploads", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const feedbackReports = pgTable("feedback_reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  name: varchar("name", { length: 120 }),
+  email: varchar("email", { length: 160 }),
+  type: varchar("type", { length: 30 }).notNull().default("bug"),
+  priority: varchar("priority", { length: 20 }).notNull().default("normal"),
+  status: varchar("status", { length: 20 }).notNull().default("novo"),
+  pageUrl: varchar("page_url", { length: 500 }),
+  message: text("message").notNull(),
+  userAgent: varchar("user_agent", { length: 300 }),
+  adminNote: text("admin_note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const systemAnnouncements = pgTable("system_announcements", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 160 }).notNull(),
+  message: text("message").notNull(),
+  variant: varchar("variant", { length: 20 }).notNull().default("info"),
+  linkLabel: varchar("link_label", { length: 80 }),
+  linkUrl: varchar("link_url", { length: 300 }),
+  active: boolean("active").notNull().default(true),
+  startsAt: timestamp("starts_at").defaultNow().notNull(),
+  endsAt: timestamp("ends_at"),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const featureFlags = pgTable("feature_flags", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 80 }).notNull().unique(),
+  label: varchar("label", { length: 160 }).notNull(),
+  description: varchar("description", { length: 400 }),
+  enabled: boolean("enabled").notNull().default(false),
+  audience: varchar("audience", { length: 40 }).notNull().default("all"),
+  updatedBy: integer("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ==================== TYPES ====================
 export type User = typeof users.$inferSelect;
 export type Freight = typeof freights.$inferSelect;
@@ -524,3 +567,6 @@ export type FiscalEvent = typeof fiscalEvents.$inferSelect;
 export type MediaUpload = typeof mediaUploads.$inferSelect;
 export type IntegrationSetting = typeof integrationSettings.$inferSelect;
 export type TrackingPosition = typeof trackingPositions.$inferSelect;
+export type FeedbackReport = typeof feedbackReports.$inferSelect;
+export type SystemAnnouncement = typeof systemAnnouncements.$inferSelect;
+export type FeatureFlag = typeof featureFlags.$inferSelect;

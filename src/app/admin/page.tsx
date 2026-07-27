@@ -108,8 +108,17 @@ export default function AdminPage() {
           <Link href="/admin/monetizacao" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
             Monetização
           </Link>
+          <Link href="/admin/feedback" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+            Feedbacks
+          </Link>
+          <Link href="/admin/comunicados" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+            Comunicados
+          </Link>
+          <Link href="/admin/flags" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+            Flags
+          </Link>
           <Link href="/admin/logs" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
-            Logs de Auditoria
+            Logs
           </Link>
         </div>
       </div>

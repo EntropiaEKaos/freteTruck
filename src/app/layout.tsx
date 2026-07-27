@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
-import BetaBanner from "@/components/BetaBanner";
+import AnnouncementBar from "@/components/AnnouncementBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col transition-colors">
-        <BetaBanner />
+        <AnnouncementBar />
         <Header />
         <main className="flex-1">{children}</main>
         <footer className="bg-slate-900 dark:bg-black text-slate-400 mt-16 border-t border-slate-800">
