@@ -455,6 +455,36 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const integrationSettings = pgTable("integration_settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 80 }).notNull().unique(),
+  value: text("value"),
+  category: varchar("category", { length: 40 }).notNull().default("geral"),
+  label: varchar("label", { length: 160 }).notNull(),
+  description: varchar("description", { length: 400 }),
+  isSecret: boolean("is_secret").notNull().default(false),
+  isPublic: boolean("is_public").notNull().default(false),
+  updatedBy: integer("updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const trackingPositions = pgTable("tracking_positions", {
+  id: serial("id").primaryKey(),
+  freightId: integer("freight_id")
+    .notNull()
+    .references(() => freights.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  lat: numeric("lat", { precision: 10, scale: 7 }).notNull(),
+  lng: numeric("lng", { precision: 10, scale: 7 }).notNull(),
+  accuracy: numeric("accuracy", { precision: 8, scale: 2 }),
+  speedKmh: numeric("speed_kmh", { precision: 6, scale: 2 }),
+  heading: numeric("heading", { precision: 6, scale: 2 }),
+  source: varchar("source", { length: 20 }).notNull().default("gps"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const mediaUploads = pgTable("media_uploads", {
   id: serial("id").primaryKey(),
   filename: varchar("filename", { length: 160 }).notNull().unique(),
@@ -492,3 +522,5 @@ export type PostComment = typeof postComments.$inferSelect;
 export type CommentLike = typeof commentLikes.$inferSelect;
 export type FiscalEvent = typeof fiscalEvents.$inferSelect;
 export type MediaUpload = typeof mediaUploads.$inferSelect;
+export type IntegrationSetting = typeof integrationSettings.$inferSelect;
+export type TrackingPosition = typeof trackingPositions.$inferSelect;

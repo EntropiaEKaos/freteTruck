@@ -1,18 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import LiveMap, { type MapMarker } from "@/components/LiveMap";
+import { IcMap, IcSearch, IcRefresh } from "@/components/Icons";
 
 type StateBucket = { state: string; total: number };
 
-const STATE_POSITIONS: Record<string, { x: number; y: number }> = {
-  AC: { x: 8, y: 42 }, AM: { x: 18, y: 25 }, RR: { x: 20, y: 7 }, PA: { x: 38, y: 28 },
-  AP: { x: 42, y: 10 }, TO: { x: 45, y: 48 }, MA: { x: 52, y: 30 }, PI: { x: 57, y: 35 },
-  CE: { x: 65, y: 28 }, RN: { x: 72, y: 28 }, PB: { x: 72, y: 32 }, PE: { x: 70, y: 36 },
-  AL: { x: 72, y: 40 }, SE: { x: 70, y: 43 }, BA: { x: 60, y: 50 }, MG: { x: 58, y: 62 },
-  ES: { x: 67, y: 62 }, RJ: { x: 63, y: 70 }, SP: { x: 52, y: 72 }, PR: { x: 48, y: 78 },
-  SC: { x: 50, y: 84 }, RS: { x: 45, y: 90 }, MS: { x: 38, y: 70 }, MT: { x: 30, y: 50 },
-  GO: { x: 45, y: 58 }, DF: { x: 50, y: 57 }, RO: { x: 15, y: 48 },
+// Coordenadas geográficas reais das capitais / centro dos estados
+const STATE_COORDS: Record<string, { lat: number; lng: number; name: string }> = {
+  AC: { lat: -9.97, lng: -67.81, name: "Acre" },
+  AL: { lat: -9.66, lng: -35.73, name: "Alagoas" },
+  AP: { lat: 0.03, lng: -51.06, name: "Amapá" },
+  AM: { lat: -3.12, lng: -60.02, name: "Amazonas" },
+  BA: { lat: -12.97, lng: -38.51, name: "Bahia" },
+  CE: { lat: -3.72, lng: -38.54, name: "Ceará" },
+  DF: { lat: -15.78, lng: -47.93, name: "Distrito Federal" },
+  ES: { lat: -20.32, lng: -40.34, name: "Espírito Santo" },
+  GO: { lat: -16.69, lng: -49.26, name: "Goiás" },
+  MA: { lat: -2.53, lng: -44.30, name: "Maranhão" },
+  MT: { lat: -15.60, lng: -56.10, name: "Mato Grosso" },
+  MS: { lat: -20.44, lng: -54.65, name: "Mato Grosso do Sul" },
+  MG: { lat: -19.92, lng: -43.94, name: "Minas Gerais" },
+  PA: { lat: -1.46, lng: -48.50, name: "Pará" },
+  PB: { lat: -7.12, lng: -34.86, name: "Paraíba" },
+  PR: { lat: -25.43, lng: -49.27, name: "Paraná" },
+  PE: { lat: -8.05, lng: -34.88, name: "Pernambuco" },
+  PI: { lat: -5.09, lng: -42.80, name: "Piauí" },
+  RJ: { lat: -22.91, lng: -43.17, name: "Rio de Janeiro" },
+  RN: { lat: -5.79, lng: -35.21, name: "Rio Grande do Norte" },
+  RS: { lat: -30.03, lng: -51.23, name: "Rio Grande do Sul" },
+  RO: { lat: -8.76, lng: -63.90, name: "Rondônia" },
+  RR: { lat: 2.82, lng: -60.67, name: "Roraima" },
+  SC: { lat: -27.59, lng: -48.55, name: "Santa Catarina" },
+  SP: { lat: -23.55, lng: -46.63, name: "São Paulo" },
+  SE: { lat: -10.95, lng: -37.07, name: "Sergipe" },
+  TO: { lat: -10.18, lng: -48.33, name: "Tocantins" },
 };
 
 export default function MapaPage() {
@@ -21,112 +44,100 @@ export default function MapaPage() {
   const [mode, setMode] = useState<"origin" | "dest">("origin");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/stats")
-      .then((r) => r.json())
-      .then((d) => {
-        setByOrigin(d.byOrigin || []);
-        setByDest(d.byDest || []);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  async function load() {
+    setLoading(true);
+    try {
+      const d = await fetch("/api/stats").then((r) => r.json());
+      setByOrigin(d.byOrigin || []);
+      setByDest(d.byDest || []);
+    } catch {}
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
 
   const data = mode === "origin" ? byOrigin : byDest;
   const maxVal = Math.max(...data.map((d) => d.total), 1);
-  const dataMap = Object.fromEntries(data.map((d) => [d.state, d.total]));
 
-  function getRadius(state: string): number {
-    const val = dataMap[state] || 0;
-    return Math.max(8, Math.min(28, 8 + (val / maxVal) * 20));
-  }
-
-  function getColor(state: string): string {
-    const val = dataMap[state] || 0;
-    if (val === 0) return mode === "origin" ? "#e2e8f0" : "#e2e8f0";
-    const ratio = val / maxVal;
-    if (mode === "origin") {
-      if (ratio > 0.6) return "#ea580c";
-      if (ratio > 0.3) return "#f97316";
-      return "#fdba74";
-    }
-    if (ratio > 0.6) return "#059669";
-    if (ratio > 0.3) return "#10b981";
-    return "#6ee7b7";
-  }
-
-  if (loading) return <div className="max-w-5xl mx-auto px-4 py-24 text-center text-slate-500 dark:text-slate-400">Carregando mapa...</div>;
+  const markers: MapMarker[] = useMemo(() => {
+    return data
+      .filter((d) => STATE_COORDS[d.state])
+      .map((d) => {
+        const coords = STATE_COORDS[d.state];
+        const ratio = d.total / maxVal;
+        const size = Math.max(30, Math.min(64, 30 + ratio * 34));
+        const color = mode === "origin"
+          ? ratio > 0.6 ? "#ea580c" : ratio > 0.3 ? "#f97316" : "#fb923c"
+          : ratio > 0.6 ? "#059669" : ratio > 0.3 ? "#10b981" : "#34d399";
+        return {
+          lat: coords.lat,
+          lng: coords.lng,
+          label: String(d.total),
+          color,
+          size,
+          popup: `<div style="font-family:system-ui;padding:4px">
+            <strong style="font-size:14px">${coords.name} (${d.state})</strong><br/>
+            <span style="color:#64748b;font-size:12px">${d.total} ${d.total === 1 ? "frete" : "fretes"} ${mode === "origin" ? "saindo" : "chegando"}</span><br/>
+            <a href="/fretes?${mode === "origin" ? "originState" : "destState"}=${d.state}" style="color:#f97316;font-weight:700;font-size:12px;text-decoration:none">Ver fretes →</a>
+          </div>`,
+        };
+      });
+  }, [data, maxVal, mode]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
-      <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">🗺️ Mapa de fretes</h1>
-      <p className="mt-1 text-slate-500 dark:text-slate-400">Visualize a distribuição de cargas por estado.</p>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-orange-500/10 dark:bg-orange-500/20 flex items-center justify-center text-orange-500">
+            <IcMap className="w-7 h-7" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white">Mapa de Fretes ao Vivo</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Mapa interativo real com a distribuição geográfica das cargas no Brasil.</p>
+          </div>
+        </div>
+        <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
+          <IcRefresh className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
+        </button>
+      </div>
 
-      <div className="mt-4 flex gap-2">
+      {/* Toggle */}
+      <div className="mt-6 flex gap-2 flex-wrap">
         <button
           onClick={() => setMode("origin")}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            mode === "origin" ? "bg-orange-500 text-white" : "bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300"
-          }`}
+          className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${mode === "origin" ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20" : "bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300"}`}
         >
-          📦 Origens (saindo de)
+          Origens (cargas saindo)
         </button>
         <button
           onClick={() => setMode("dest")}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            mode === "dest" ? "bg-emerald-500 text-white" : "bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300"
-          }`}
+          className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${mode === "dest" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300"}`}
         >
-          📍 Destinos (chegando em)
+          Destinos (cargas chegando)
         </button>
       </div>
 
-      <div className="mt-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 overflow-hidden">
-        <svg viewBox="0 0 100 100" className="w-full max-w-2xl mx-auto" style={{ minHeight: 400 }}>
-          {/* Background */}
-          <rect x="0" y="0" width="100" height="100" fill="transparent" />
+      {/* Mapa real */}
+      <div className="mt-5">
+        <LiveMap markers={markers} height={520} fitBounds={markers.length > 0} zoom={4} />
+      </div>
 
-          {Object.entries(STATE_POSITIONS).map(([uf, pos]) => {
-            const val = dataMap[uf] || 0;
-            const r = getRadius(uf);
-            const color = getColor(uf);
-            return (
-              <Link key={uf} href={`/fretes?${mode === "origin" ? "originState" : "destState"}=${uf}`}>
-                <g className="cursor-pointer hover:opacity-80 transition-opacity">
-                  <circle cx={pos.x} cy={pos.y} r={r / 4} fill={color} opacity={0.3} />
-                  <circle cx={pos.x} cy={pos.y} r={r / 6} fill={color} />
-                  <text x={pos.x} y={pos.y - r / 4 - 1.5} textAnchor="middle" fontSize="3" fontWeight="bold" fill="currentColor" className="text-slate-900 dark:text-white">
-                    {uf}
-                  </text>
-                  {val > 0 && (
-                    <text x={pos.x} y={pos.y + 1} textAnchor="middle" fontSize="2.5" fontWeight="bold" fill="white">
-                      {val}
-                    </text>
-                  )}
-                </g>
-              </Link>
-            );
-          })}
-        </svg>
-
-        {/* Legend */}
-        <div className="mt-4 flex items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
-          <span className="flex items-center gap-1.5">
-            <span className={`inline-block w-3 h-3 rounded-full ${mode === "origin" ? "bg-orange-500" : "bg-emerald-500"}`} />
-            Muitos fretes
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className={`inline-block w-3 h-3 rounded-full ${mode === "origin" ? "bg-orange-300" : "bg-emerald-300"}`} />
-            Poucos fretes
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded-full bg-slate-200 dark:bg-slate-600" />
-            Sem fretes
-          </span>
-        </div>
+      {/* Legenda */}
+      <div className="mt-4 flex items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+        <span className="flex items-center gap-1.5">
+          <span className={`inline-block w-4 h-4 rounded-full ${mode === "origin" ? "bg-orange-600" : "bg-emerald-600"}`} /> Alto volume
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className={`inline-block w-3 h-3 rounded-full ${mode === "origin" ? "bg-orange-400" : "bg-emerald-400"}`} /> Baixo volume
+        </span>
+        <span className="text-slate-400">Clique em um marcador para ver os fretes daquele estado</span>
       </div>
 
       {/* Ranking */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <h2 className="mt-10 text-lg font-bold text-slate-900 dark:text-white">
+        Top estados {mode === "origin" ? "de origem" : "de destino"}
+      </h2>
+      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
         {data.slice(0, 8).map((s, i) => (
           <Link
             key={s.state}
@@ -134,11 +145,20 @@ export default function MapaPage() {
             className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:border-orange-400 transition-colors text-center"
           >
             <p className="text-2xl font-extrabold text-slate-900 dark:text-white">#{i + 1}</p>
-            <p className="text-lg font-bold mt-1">{s.state}</p>
-            <p className="text-sm text-slate-500">{s.total} fretes</p>
+            <p className="text-lg font-bold text-orange-500 mt-1">{s.state}</p>
+            <p className="text-xs text-slate-500">{STATE_COORDS[s.state]?.name}</p>
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-1">{s.total} fretes</p>
           </Link>
         ))}
       </div>
+
+      {data.length === 0 && !loading && (
+        <div className="mt-8 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-10 text-center">
+          <IcSearch className="w-10 h-10 text-slate-300 mx-auto" />
+          <p className="mt-3 font-bold text-slate-900 dark:text-white">Nenhum frete ativo no momento</p>
+          <Link href="/publicar" className="mt-3 inline-block text-orange-600 font-semibold text-sm hover:underline">Publicar o primeiro frete →</Link>
+        </div>
+      )}
     </div>
   );
 }

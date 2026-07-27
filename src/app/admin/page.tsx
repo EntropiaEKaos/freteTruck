@@ -101,9 +101,17 @@ export default function AdminPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400">Gerencie usuários, documentos e métricas do sistema.</p>
           </div>
         </div>
-        <Link href="/admin/logs" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
-          📋 Logs de Auditoria
-        </Link>
+        <div className="flex gap-2 flex-wrap">
+          <Link href="/admin/integracoes" className="text-xs font-bold px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+            Mapas & GPS
+          </Link>
+          <Link href="/admin/monetizacao" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+            Monetização
+          </Link>
+          <Link href="/admin/logs" className="text-xs font-bold px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 transition-colors">
+            Logs de Auditoria
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
