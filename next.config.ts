@@ -10,6 +10,21 @@ const nextConfig: NextConfig = {
     unoptimized: true, // Necessário para hero.jpg e uploads funcionarem
   },
 
+  async rewrites() {
+    return {
+      fallback: [
+        {
+          source: "/uploads/:path*",
+          destination: "/api/uploads/:path*",
+        },
+        {
+          source: "/images/:path*",
+          destination: "/api/static-images/:path*",
+        },
+      ],
+    };
+  },
+
   async headers() {
     return [
       {
