@@ -3,11 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Garante que imagens estáticas do /public funcionem
+  output: "standalone",
+
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "**" },
-      { protocol: "http", hostname: "**" },
-    ],
+    unoptimized: true, // Necessário para hero.jpg e uploads funcionarem
   },
 
   async headers() {
