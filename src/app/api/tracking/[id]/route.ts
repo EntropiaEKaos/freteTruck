@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { freights } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/auth";
+import { getTrackingAccess } from "@/lib/tracking-access";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,20 +38,19 @@ function simulateTracking(originState: string, destState: string, createdAtStr: 
 }
 
 export async function GET(_req: Request, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const { id } = await params;
   const freightId = parseInt(id, 10);
   if (Number.isNaN(freightId)) return NextResponse.json({ error: "ID inválido." }, { status: 400 });
 
-  const rows = await db.select().from(freights).where(eq(freights.id, freightId)).limit(1);
-  const f = rows[0];
-  if (!f) return NextResponse.json({ error: "Frete não encontrado." }, { status: 404 });
+  const access = await getTrackingAccess(freightId, user.id, user.role);
+  if (!access.freight) return NextResponse.json({ error: "Frete não encontrado." }, { status: 404 });
+  if (!access.canRead) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
 
+  const f = access.freight;
   const data = simulateTracking(f.originState, f.destState, f.createdAt instanceof Date ? f.createdAt.toISOString() : String(f.createdAt));
 
-  await db.update(freights).set({
-    trackingActive: true,
-    trackingData: JSON.stringify(data),
-  }).where(eq(freights.id, freightId));
-
-  return NextResponse.json(data);
+  // Simulated positions are never stored or labelled as live GPS.
+  return NextResponse.json({ ...data, simulated: true });
 }

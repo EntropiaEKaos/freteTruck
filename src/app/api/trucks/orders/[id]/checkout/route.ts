@@ -59,7 +59,11 @@ export async function POST(req: Request, { params }: Params) {
     }
   }
 
-  // Fallback beta/manual
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Pagamento indisponível. Configure o provedor de pagamentos." }, { status: 503 });
+  }
+
+  // Fallback beta/manual: only operable by an administrator outside production.
   return NextResponse.json({
     provider: "manual_beta",
     message: "Mercado Pago não configurado. Use o botão de confirmação manual.",

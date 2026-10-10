@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/db";
+import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +8,18 @@ export const dynamic = "force-dynamic";
  * Endpoint de setup — cria todas as tabelas no banco de dados.
  * Acesse UMA VEZ após o deploy: https://seu-app.vercel.app/api/setup
  */
-export async function POST() {
+export async function POST(req: Request) {
+  // First installation: explicitly provision a strong SETUP_TOKEN in the environment.
+  // Subsequent schema syncs are available to authenticated administrators only.
+  const user = await getCurrentUser();
+  const setupToken = process.env.SETUP_TOKEN;
+  const providedToken = req.headers.get("x-setup-token");
+  const authorized = user?.role === "admin" ||
+    (Boolean(setupToken && setupToken.length >= 32) && providedToken === setupToken);
+  if (!authorized) {
+    return NextResponse.json({ error: "Instalação restrita a administradores ou token de setup." }, { status: 403 });
+  }
+
   const schema = `
     -- Usuários
     CREATE TABLE IF NOT EXISTS users (
@@ -515,19 +527,8 @@ export async function POST() {
   try {
     await pool.query(schema);
 
-    // Inserir dados demo (admin padrão)
-    const { randomBytes, scryptSync } = await import("crypto");
-    const hashPassword = (pw: string) => {
-      const salt = randomBytes(16).toString("hex");
-      return `${salt}:${scryptSync(pw, salt, 64).toString("hex")}`;
-    };
-
-    await pool.query(`
-      INSERT INTO users (name, email, password_hash, phone, role, credits, verified, referral_code)
-      VALUES 
-        ('Admin Demo', 'demo@fretetruck.com.br', $1, '65999990001', 'admin', 50, true, 'ADMIN2025')
-      ON CONFLICT (email) DO NOTHING
-    `, [hashPassword("demo123")]);
+    // Security: never create a predictable demo administrator on setup.
+    // Bootstrap an administrator through a reviewed, private provisioning process.
 
     await pool.query(`
       INSERT INTO monetization_settings (key, value, label, description)

@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     try {
       // Executar criação do schema via /api/setup query
       const { POST: runSetup } = await import("@/app/api/setup/route");
-      const res = await runSetup();
+      const res = await runSetup(req);
       const data = await res.json();
       await auditLog({ userId: admin.id, actorEmail: admin.email, action: "admin.db_sync_schema", entity: "db", details: data });
       return NextResponse.json(data);
@@ -63,6 +63,9 @@ export async function POST(req: Request) {
   }
 
   if (action === "seed_demo") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Dados demo desabilitados em produção." }, { status: 403 });
+    }
     try {
       // Inserir dados de exemplo realistas para teste de produção
       const { randomBytes, scryptSync } = await import("crypto");

@@ -9,6 +9,9 @@ import { auditLog } from "@/lib/audit";
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  // Never allow self-confirmation of purchases in a live environment.
+  if (process.env.NODE_ENV === "production") return NextResponse.json({ error: "Pagamento manual indisponível em produção." }, { status: 403 });
+  if (user.role !== "admin") return NextResponse.json({ error: "Somente administradores podem confirmar pagamentos de teste." }, { status: 403 });
   const { id } = await params;
   const orderId = parseInt(id, 10);
   const [row] = await db.select({ order: billingOrders, product: truckProducts }).from(billingOrders).innerJoin(truckProducts, eq(billingOrders.productId, truckProducts.id)).where(eq(billingOrders.id, orderId)).limit(1);
