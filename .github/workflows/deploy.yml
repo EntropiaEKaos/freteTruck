@@ -40,9 +40,6 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Lint
-        run: npm run lint
-
       - name: TypeScript check
         run: npm run typecheck
 
@@ -51,3 +48,8 @@ jobs:
         env:
           DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
           AUTH_SECRET: "test-secret-for-ci"
+
+      # Existing repository-wide lint debt is intentionally visible/failing.
+      # Run after typecheck/build so CI reports compilation separately.
+      - name: Lint (full codebase)
+        run: npm run lint

@@ -511,6 +511,24 @@ export async function POST(req: Request) {
       redeemed_at timestamp DEFAULT now() NOT NULL
     );
 
+    -- Roadmap features and votes
+    CREATE TABLE IF NOT EXISTS roadmap_features (
+      id serial PRIMARY KEY,
+      title varchar(180) NOT NULL,
+      description text,
+      status varchar(30) NOT NULL DEFAULT 'planejado',
+      votes_count int NOT NULL DEFAULT 0,
+      created_at timestamp DEFAULT now() NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS roadmap_votes (
+      id serial PRIMARY KEY,
+      feature_id int NOT NULL REFERENCES roadmap_features(id) ON DELETE CASCADE,
+      user_id int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at timestamp DEFAULT now() NOT NULL,
+      UNIQUE(feature_id, user_id)
+    );
+
     -- Denúncias de moderação
     CREATE TABLE IF NOT EXISTS content_reports (
       id serial PRIMARY KEY,
