@@ -36,6 +36,11 @@ export async function POST(req: Request) {
         .limit(1);
 
       if (!row) return NextResponse.json({ ok: false, reason: "order_not_found" }, { status: 200 });
+      // Bind the provider payment to the expected order and exact billed amount.
+      const receivedCents = Math.round(Number(payment.transactionAmount) * 100);
+      if (row.order.provider !== "mercadopago" || !Number.isFinite(receivedCents) || receivedCents !== row.order.amountCents) {
+        return NextResponse.json({ ok: false, reason: "order_amount_or_provider_mismatch" }, { status: 200 });
+      }
 
       if (payment.status === "approved" && row.order.status !== "paid") {
         const [updated] = await db

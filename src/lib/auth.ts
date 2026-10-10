@@ -7,11 +7,10 @@ import { and, eq, isNull } from "drizzle-orm";
 function getSecret(): string {
   if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
   if (process.env.NODE_ENV === "production") {
-    console.warn("AUTH_SECRET nao definido em producao! Gere com: openssl rand -hex 32");
+    throw new Error("AUTH_SECRET obrigatório em produção. Gere uma chave aleatória forte.");
   }
-  return "frete-truck-dev-secret-2024";
+  return "frete-truck-local-development-only";
 }
-const SECRET = getSecret();
 const COOKIE_NAME = "ft_session";
 
 export function hashPassword(password: string): string {
@@ -29,7 +28,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 }
 
 function sign(value: string): string {
-  return createHmac("sha256", SECRET).update(value).digest("hex");
+  return createHmac("sha256", getSecret()).update(value).digest("hex");
 }
 
 export function createSessionToken(userId: number): string {

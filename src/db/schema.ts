@@ -568,6 +568,24 @@ export const contentReports = pgTable("content_reports", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+
+/** Product roadmap proposals and per-user votes (referenced by /api/roadmap). */
+export const roadmapFeatures = pgTable("roadmap_features", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 180 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 30 }).notNull().default("planejado"),
+  votesCount: integer("votes_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const roadmapVotes = pgTable("roadmap_votes", {
+  id: serial("id").primaryKey(),
+  featureId: integer("feature_id").notNull().references(() => roadmapFeatures.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ==================== TYPES ====================
 export type User = typeof users.$inferSelect;
 export type Freight = typeof freights.$inferSelect;

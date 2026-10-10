@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { freights, trackingPositions, users } from "@/db/schema";
+import { getTrackingAccess } from "@/lib/tracking-access";
 import { desc, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -17,16 +18,17 @@ export async function POST(req: Request, { params }: Params) {
   const freightId = parseInt(id, 10);
   if (Number.isNaN(freightId)) return NextResponse.json({ error: "Frete inválido." }, { status: 400 });
 
+  const access = await getTrackingAccess(freightId, user.id, user.role);
+  if (!access.freight) return NextResponse.json({ error: "Frete não encontrado." }, { status: 404 });
+  if (!access.canWrite) return NextResponse.json({ error: "Apenas o motorista com proposta aceita pode transmitir GPS." }, { status: 403 });
+
   const b = await req.json();
-  const lat = parseFloat(b.lat);
-  const lng = parseFloat(b.lng);
+  const lat = Number(b.lat);
+  const lng = Number(b.lng);
 
   if (Number.isNaN(lat) || Number.isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     return NextResponse.json({ error: "Coordenadas inválidas." }, { status: 400 });
   }
-
-  const [freight] = await db.select().from(freights).where(eq(freights.id, freightId)).limit(1);
-  if (!freight) return NextResponse.json({ error: "Frete não encontrado." }, { status: 404 });
 
   const [pos] = await db
     .insert(trackingPositions)
@@ -49,9 +51,15 @@ export async function POST(req: Request, { params }: Params) {
 
 /** Histórico de posições reais do frete */
 export async function GET(_req: Request, { params }: Params) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const { id } = await params;
   const freightId = parseInt(id, 10);
   if (Number.isNaN(freightId)) return NextResponse.json({ error: "Frete inválido." }, { status: 400 });
+
+  const access = await getTrackingAccess(freightId, user.id, user.role);
+  if (!access.freight) return NextResponse.json({ error: "Frete não encontrado." }, { status: 404 });
+  if (!access.canRead) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
 
   const rows = await db
     .select({ position: trackingPositions, driverName: users.name })

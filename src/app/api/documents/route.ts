@@ -3,8 +3,6 @@ import { db } from "@/db";
 import { documents, mediaUploads, users } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
-import { writeFileSync, mkdirSync, existsSync } from "fs";
-import { join } from "path";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -33,6 +31,9 @@ export async function POST(req: Request) {
       if (!matches) return NextResponse.json({ error: "Formato de arquivo inválido." }, { status: 400 });
 
       const mimeType = matches[1];
+      if (!["application/pdf", "image/jpeg", "image/png"].includes(mimeType)) {
+        return NextResponse.json({ error: "Envie PDF, JPEG ou PNG." }, { status: 400 });
+      }
       const ext = mimeType.includes("pdf") ? "pdf" : mimeType.includes("png") ? "png" : "jpg";
       const filename = `doc_${user.id}_${b.docType}_${Date.now()}.${ext}`;
       const base64Data = matches[2];
@@ -53,18 +54,13 @@ export async function POST(req: Request) {
       });
       fileUrl = `/api/uploads/${filename}`;
 
-      // 2. Opcional/Fallback: tentar salvar no disco (para dev local se public/uploads for gravável)
-      try {
-        const uploadsDir = join(process.cwd(), "public", "uploads");
-        if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
-        writeFileSync(join(uploadsDir, filename), buffer);
-      } catch {}
+      // Confidential identity documents must never be copied into public/uploads.
     } catch (err) {
       console.error("Upload error:", err);
       return NextResponse.json({ error: "Erro ao salvar arquivo no banco." }, { status: 500 });
     }
   } else {
-    fileUrl = `/api/uploads/demo_${b.docType}_${user.id}.jpg`;
+    return NextResponse.json({ error: "Arquivo obrigatório para verificação." }, { status: 400 });
   }
 
   const [doc] = await db.insert(documents).values({
